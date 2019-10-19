@@ -95,6 +95,24 @@ namespace joytracer {
     };
 
     /*
+    * The sphere shape.
+    */
+    class Sphere : public Surface {
+    private:
+        double m_radius;
+        std::array<double, 3> m_center;
+        std::array<double, 3> m_color;
+    public:
+        Sphere(double radius, std::array<double, 3> center, std::array<double, 3> color) :
+            m_radius(radius),
+            m_center(center),
+            m_color(color)
+        {}
+        ~Sphere() {}
+        std::optional<HitResult> hit_test(const Ray &ray) const override;
+    };
+
+    /*
     * The scene, holding all models and surfaces.
     */
     class Scene {

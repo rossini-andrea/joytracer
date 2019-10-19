@@ -116,6 +116,18 @@ namespace joytracer {
 auto make_scene_surfaces() {
     std::vector<std::unique_ptr<joytracer::Surface>> v;
     v.push_back(std::make_unique<joytracer::Floor>());
+    v.push_back(std::make_unique<joytracer::Sphere>(
+        0.5, std::array<double, 3>{1.0, 3.0, 0.5},
+        std::array<double, 3>{0.0, 0.1, 1.0}
+    ));
+    v.push_back(std::make_unique<joytracer::Sphere>(
+        0.5, std::array<double, 3>{-1.0, 3.5, 0.5},
+        std::array<double, 3>{0.0, 0.8, 0.1}
+    ));
+    v.push_back(std::make_unique<joytracer::Sphere>(
+        1.0, std::array<double, 3>{0.0, 6.0, 1.0},
+        std::array<double, 3>{1.0, 0.5, 0.5}
+    ));
     return v;
 }
 
