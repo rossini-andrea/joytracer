@@ -36,7 +36,7 @@ int main() {
     );
     joytracer::Camera fixed_camera;
     fixed_camera.set_focal_distance(1.0);
-    fixed_camera.set_plane_size(640.0 / 480.0, 1.0);
+    fixed_camera.set_plane_size(1.0, 480.0 / 640.0);
     fixed_camera.set_position({0.0, 0.0, 1.77});
     auto fixed_frame = fixed_camera.render_scene(test_scene, 640, 480);
     backbuffer.lock();

@@ -1,10 +1,14 @@
 #pragma once
+#include <memory>
 #include <functional>
 
 #include <SDL2/SDL.h>
 
 namespace sdl_wrapper {
     class SDL {
+    private:
+        SDL(const SDL&);
+        SDL& operator=(const SDL&);
     public:
         SDL();
         ~SDL();
@@ -12,7 +16,10 @@ namespace sdl_wrapper {
 
     class SDLSurface {
     private:
-        SDL_Surface* m_surface;
+        std::unique_ptr<SDL_Surface> m_surface;
+
+        SDLSurface(const SDLSurface&);
+        SDLSurface& operator=(const SDLSurface&);
     public:
         SDLSurface(SDL_Surface* surface) :
             m_surface(surface)
@@ -37,11 +44,24 @@ namespace sdl_wrapper {
 
     class SDLWindow {
     private:
-        SDL_Window* m_window;
+        class Deleter {
+        public:
+            typedef SDL_Window *pointer;
+            void operator()(SDL_Window *w);
+        };
+
+        std::unique_ptr<SDL_Window, Deleter> m_window;
+
+        SDLWindow(const SDLWindow&);
+        SDLWindow& operator=(const SDLWindow&);
     public:
         SDLWindow(const std::string &title, int width, int height);
-        ~SDLWindow();
-        SDLSurface get_surface() ;
+        ~SDLWindow() = default;
+
+        SDLWindow(SDLWindow&&) = default;
+        SDLWindow& operator=(SDLWindow&&) = default;
+
+        SDLSurface get_surface();
         void update_surface();
     };
 

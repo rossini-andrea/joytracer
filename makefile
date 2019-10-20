@@ -16,6 +16,7 @@ all: joytracer
 
 clean:
 	rm -r build
+	rm joytracer
 
 $(BUILD_DIR):
 	mkdir $(BUILD_DIR)
