@@ -37,7 +37,7 @@ namespace sdl_wrapper {
         SDL_FreeSurface(m_surface.release());
     }
 
-    void SDLSurface::blit_to(SDLSurface &destination) {
+    void SDLSurface::blit_to(const SDLSurface &destination) {
         SDL_BlitSurface(m_surface.get(), nullptr, destination.m_surface.get(), nullptr);
     }
 

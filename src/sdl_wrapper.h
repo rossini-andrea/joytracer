@@ -35,7 +35,7 @@ namespace sdl_wrapper {
             Uint32 a_mask);
         ~SDLSurface();
 
-        void blit_to(SDLSurface &destination);
+        void blit_to(const SDLSurface &destination);
         // Dangerous! we should return a lock token!
         void lock();
         void unlock();
