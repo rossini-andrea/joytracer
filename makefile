@@ -4,7 +4,9 @@ CFLAGS=-Wall -Wextra -Wpedantic -std=c++17 -ggdb
 DEPFLAGS=-MT $@ -MMD -MP -MF
 LFLAGS=-lm -ldl
 LIBS=stdc++ SDL2
-SOURCES=src/joytracer.cpp \
+SOURCES=\
+src/joytracer.cpp \
+src/sdl_wrapper.cpp \
 src/sdl_main.cpp
 OBJECTS=$(patsubst src/%.cpp,$(BUILD_DIR)/%.cpp.o,$(SOURCES))
 
@@ -14,6 +16,7 @@ all: joytracer
 
 clean:
 	rm -r build
+	rm joytracer
 
 $(BUILD_DIR):
 	mkdir $(BUILD_DIR)
