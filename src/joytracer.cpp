@@ -1,6 +1,7 @@
-#include "joytracer.h"
+#include <algorithm>
+
 #include "joymath.h"
-#include "algorithm"
+#include "joytracer.h"
 
 namespace joytracer {
 /*
@@ -94,10 +95,10 @@ namespace joytracer {
         std::vector<std::array<double, 3>> frame(width * height);
 
         for (int y = 0; y < height; ++y) {
-            double surface_y = m_plane_height * (0.5 - (double)y / height);
+            double surface_y = m_plane_height * (0.5 - static_cast<double>(y) / height);
 
             for (int x = 0; x < width; ++x) {
-                double surface_x = m_plane_width * ((double)x / width - 0.5);
+                double surface_x = m_plane_width * (static_cast<double>(x) / width - 0.5);
                 frame[y * width + x] = scene.trace_ray(Ray(
                     m_position,
                     normalize(std::array<double, 3>{surface_x, m_focal_distance, surface_y})
@@ -107,5 +108,4 @@ namespace joytracer {
 
         return frame;
     }
-}
-
+} // namespace joytracer

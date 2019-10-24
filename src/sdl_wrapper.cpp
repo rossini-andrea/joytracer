@@ -1,5 +1,5 @@
-#include <string>
 #include <stdexcept>
+#include <string>
 
 #include "sdl_wrapper.h"
 
@@ -43,7 +43,7 @@ namespace sdl_wrapper {
 
     // Dangerous! we should return a lock token!
     void SDLSurface::lock() {
-        if (SDL_LockSurface(m_surface.get())) {
+        if (SDL_LockSurface(m_surface.get()) != 0) {
             throw std::runtime_error("SDL_LockSurface failed! SDL_Error: "s + SDL_GetError());
         }
     }
@@ -53,7 +53,7 @@ namespace sdl_wrapper {
     }
 
     void SDLSurface::set_pixel(int x, int y, uint32_t pixel) {
-        uint32_t *target_pixel = reinterpret_cast<uint32_t*>(
+        auto *target_pixel = reinterpret_cast<uint32_t*>(
             reinterpret_cast<uint8_t*>(m_surface->pixels) +
             y * m_surface->pitch + x * sizeof(uint32_t)
         );
@@ -69,7 +69,10 @@ namespace sdl_wrapper {
     }
 
     void SDLWindow::Deleter::operator()(SDL_Window *w) {
-        if (w == nullptr) return;
+        if (w == nullptr) {
+            return;
+        }
+
         SDL_DestroyWindow(w);
     }
 
@@ -81,11 +84,12 @@ namespace sdl_wrapper {
         SDL_UpdateWindowSurface(m_window.get());
     }
 
-    void quick_and_dirty_sdl_loop(std::function<void()> p) {
+    void quick_and_dirty_sdl_loop(const std::function<void()> p) {
         while (true) {
             // Get the next event
             SDL_Event event;
-            if (SDL_PollEvent(&event))
+
+            if (SDL_PollEvent(&event) != 0)
             {
                 if (event.type == SDL_QUIT)
                 {
@@ -97,4 +101,4 @@ namespace sdl_wrapper {
             }
         }
     }
-}
+} // namespace sdl_wrapper
