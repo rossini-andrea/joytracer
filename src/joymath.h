@@ -13,6 +13,16 @@ namespace joytracer {
         return std::inner_product(a.begin(), a.end(), b.begin(), T(0));
     }
 
+    template<class T>
+    std::array<T, 3> cross(const std::array<T, 3> &a,
+        const std::array<T, 3> &b) {
+        return {
+            a[1]*b[2] - a[2]*b[1],
+            a[2]*b[0] - a[0]*b[2],
+            a[0]*b[1] - a[1]*b[0]
+        };
+    }
+
     template<class T, std::size_t N>
     std::array<T, N> operator+(const std::array<T, N> &a,
         const std::array<T, N> &b) {
@@ -40,6 +50,16 @@ namespace joytracer {
         std::array<T, N> result;
         std::transform(a.begin(), a.end(), result.begin(),
             [=](T x) -> T { return x * b; });
+        return result;
+    }
+
+    template<class T, std::size_t N>
+    std::array<T, N> operator/(const std::array<T, N> &a,
+        const T &b) {
+
+        std::array<T, N> result;
+        std::transform(a.begin(), a.end(), result.begin(),
+            [=](T x) -> T { return x / b; });
         return result;
     }
 

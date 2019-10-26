@@ -31,6 +31,28 @@ namespace joytracer {
     };
 
     /*
+    * Geometrical information about a hit result
+    */
+    class HitPoint {
+    private:
+        double m_distance;
+        std::array<double, 3> m_point;
+    public:
+        HitPoint(
+            double distance,
+            const std::array<double, 3> &point
+        ) : m_distance(distance), m_point(point) {}
+
+        double distance() const {
+            return m_distance;
+        }
+
+        const std::array<double, 3> &point() const {
+            return m_point;
+        }
+    };
+
+    /*
     * The result of casting a ray and successfully hitting a surface.
     */
     class HitResult {
@@ -66,24 +88,23 @@ namespace joytracer {
         virtual ~Surface() = default;
         virtual std::optional<HitResult> hit_test(const Ray &ray) const = 0;
     };
-/*
-    class FlatSurface : Surface {
+
+    /*
+    * A triangle in 3D space.
+    */
+    class Triangle : public Surface {
     private:
-        std::array<double, 3> m_origin;
+        std::array<std::array<double, 3>, 3> m_vertices;
+        std::array<double, 3> m_color;
         std::array<double, 3> m_normal;
-        std::array<double, 4> m_rect;
     public:
-        FlatSurface(
-            const std::array<double, 3> &origin
-            const std::array<double, 3> &normal,
-            const std::array<double, 4> &rect
-        ) :
-        m_origin(origin),
-        m_normal(normal),
-        m_rect(rect) {};
+        Triangle(
+            const std::array<std::array<double, 3>, 3> &vertices,
+            const std::array<double, 3> &color
+        );
         std::optional<HitResult> hit_test(const Ray &ray) const override;
     };
-*/
+
     /*
     * An infinite surface facing upward with fixed origin at `0,0,0`.
     */

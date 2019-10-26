@@ -7,6 +7,52 @@
 #include "joytracer.h"
 #include "sdl_wrapper.h"
 
+auto make_pyramid() {
+    std::vector<std::unique_ptr<joytracer::Surface>> v;
+
+    // South face
+    v.push_back(std::make_unique<joytracer::Triangle>(
+        std::array<std::array<double, 3>, 3>({
+            std::array<double, 3>{-1.0, 14.0, 0.0},
+            std::array<double, 3>{7.0, 14.0, 0.0},
+            std::array<double, 3>{3.0, 18.0, 5.0}
+        }),
+        std::array<double, 3>{0.8, 0.8, 0.4}
+    ));
+
+    // West face
+    v.push_back(std::make_unique<joytracer::Triangle>(
+        std::array<std::array<double, 3>, 3>({
+            std::array<double, 3>{-1.0, 22.0, 0.0},
+            std::array<double, 3>{-1.0, 14.0, 0.0},
+            std::array<double, 3>{3.0, 18.0, 5.0}
+        }),
+        std::array<double, 3>{0.8, 0.8, 0.4}
+    ));
+
+    // North face
+    v.push_back(std::make_unique<joytracer::Triangle>(
+        std::array<std::array<double, 3>, 3>({
+            std::array<double, 3>{7.0, 22.0, 0.0},
+            std::array<double, 3>{-1.0, 22.0, 0.0},
+            std::array<double, 3>{3.0, 18.0, 5.0}
+        }),
+        std::array<double, 3>{0.8, 0.8, 0.4}
+    ));
+
+    // East face
+    v.push_back(std::make_unique<joytracer::Triangle>(
+        std::array<std::array<double, 3>, 3>({
+            std::array<double, 3>{7.0, 22.0, 0.0},
+            std::array<double, 3>{7.0, 14.0, 0.0},
+            std::array<double, 3>{3.0, 18.0, 5.0}
+        }),
+        std::array<double, 3>{0.8, 0.8, 0.4}
+    ));
+
+    return v;
+}
+
 auto make_scene_surfaces() {
     std::vector<std::unique_ptr<joytracer::Surface>> v;
     v.push_back(std::make_unique<joytracer::Floor>());
@@ -22,6 +68,11 @@ auto make_scene_surfaces() {
         1.0, std::array<double, 3>{0.0, 6.0, 1.0},
         std::array<double, 3>{1.0, 0.5, 0.5}
     ));
+
+    for (auto&& surface: make_pyramid()) {
+        v.push_back(std::move(surface));
+    }
+
     return v;
 }
 

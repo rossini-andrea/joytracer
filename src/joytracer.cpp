@@ -4,41 +4,70 @@
 #include "joytracer.h"
 
 namespace joytracer {
-/*
-    std::optional<HitResult> FlatSurface::hit_test(const Ray &ray) const {
-        auto denom = dot(ray.normal(), m_normal);
-
-        if (denom > -epsilon && denom < epsilon) {
-            return std::nullopt;
-        }
-
-        auto numerator = dot((m_origin - ray.origin()), m_normal);
-        auto hit_point = denom * ray.normal() + ray.origin();
-
-        // TODO: check if hit_point is in the rectangle
-
-        return std::nullopt;
-    }*/
-    std::optional<HitResult> Floor::hit_test(const Ray &ray) const {
-        // Calculate if hit
-        auto denom = dot(ray.get_normal(), {0.0, 0.0, 1.0});
+    std::optional<HitPoint> project_ray_on_plane(
+        const Ray &ray,
+        const std::array<double, 3> &plane_origin,
+        const std::array<double, 3> &plane_normal) {
+        // Calculate if it may hit
+        auto denom = dot(ray.get_normal(), plane_normal);
 
         if (denom > -epsilon && denom < epsilon) {
             return std::nullopt;
         }
 
         auto distance = dot(
-            (std::array<double, 3>{0.0, 0.0, 0.0} - ray.get_origin()),
-            {0.0, 0.0, 1.0}) / denom;
+            (plane_origin - ray.get_origin()),
+            plane_normal) / denom;
 
+        // Ignore if behind
         if (distance <= 0.0) {
             return std::nullopt;
         }
 
-        auto hit_point = ray.get_normal() * distance + ray.get_origin();
+        return HitPoint(distance, ray.get_normal() * distance + ray.get_origin());
+    }
+
+    Triangle::Triangle(
+            const std::array<std::array<double, 3>, 3> &vertices,
+            const std::array<double, 3> &color
+        ) : m_vertices(vertices), m_color(color),
+            m_normal(normalize(cross(
+                vertices[1] - vertices[0],
+                vertices[2] - vertices[1]
+            ))) {
+    }
+
+    std::optional<HitResult> Triangle::hit_test(const Ray &ray) const {
+        auto projection = project_ray_on_plane(ray, *m_vertices.begin(), m_normal);
+
+        if (!projection) {
+            return std::nullopt;
+        }
+
+        auto hit_point = projection->point();
+
+        // Check if the point is "behind" all three edges at once. If so
+        // it is between the edges.
+        if (dot(m_normal, cross(m_vertices[1] - m_vertices[0], hit_point - m_vertices[1])) > 0 &&
+            dot(m_normal, cross(m_vertices[2] - m_vertices[1], hit_point - m_vertices[2])) > 0 &&
+            dot(m_normal, cross(m_vertices[0] - m_vertices[2], hit_point - m_vertices[0])) > 0) {
+            return HitResult(projection->distance(), hit_point, m_color);
+        }
+
+        return std::nullopt;
+    }
+
+    std::optional<HitResult> Floor::hit_test(const Ray &ray) const {
+        auto projection = project_ray_on_plane(ray, {0.0, 0.0, 0.0}, {0.0, 0.0, 1.0});
+
+        if (!projection) {
+            return std::nullopt;
+        }
+
+        auto hit_point = projection->point();
         long is_x_odd = static_cast<long>(floorf(hit_point[0])) & 1;
         long is_y_odd = static_cast<long>(floorf(hit_point[1])) & 1;
-        return HitResult(distance, hit_point,
+        return HitResult(projection->distance(), hit_point,
             (is_x_odd == is_y_odd) ?
             std::array<double, 3>{1.0, 1.0, 1.0} :
             std::array<double, 3>{0.0, 0.0, 0.0});
