@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <string>
 
+#include "joymath.h"
 #include "joytracer.h"
 #include "sdl_wrapper.h"
 
@@ -66,7 +67,7 @@ auto make_scene_surfaces() {
     ));
     v.push_back(std::make_unique<joytracer::Sphere>(
         1.0, std::array<double, 3>{0.0, 6.0, 1.0},
-        std::array<double, 3>{1.0, 0.5, 0.5}
+        std::array<double, 3>{1.0, 1.0, 1.0}
     ));
 
     for (auto&& surface: make_pyramid()) {
@@ -106,6 +107,16 @@ int main() {
     sdl_wrapper::quick_and_dirty_sdl_loop([&]() -> void {
         backbuffer.blit_to(main_surface);
         sdl_window.update_surface();
-    });
+    },
+    [&](int x, int y) -> void {
+        double surface_y = (480.0 / 640.0) * (0.5 - static_cast<double>(y) / 480);
+        double surface_x = (static_cast<double>(x) / 640 - 0.5);
+        auto color = test_scene.trace_ray(joytracer::Ray(
+                    {0.0, 0.0, 1.77},
+                    joytracer::normalize(std::array<double, 3>{surface_x, 1.0, surface_y})
+                ), 10);
+        std::cout << "Color of clicked point: " << color[0] << ", " << color[1] << ", " << color[2] << ", " << '\n';
+    }
+    );
     return 0;
 }

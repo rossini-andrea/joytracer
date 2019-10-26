@@ -84,20 +84,24 @@ namespace sdl_wrapper {
         SDL_UpdateWindowSurface(m_window.get());
     }
 
-    void quick_and_dirty_sdl_loop(const std::function<void()> p) {
+    void quick_and_dirty_sdl_loop(
+        const std::function<void()> repaint,
+        const std::function<void(int x, int y)> onclick
+    ) {
         while (true) {
             // Get the next event
             SDL_Event event;
 
-            if (SDL_PollEvent(&event) != 0)
-            {
-                if (event.type == SDL_QUIT)
-                {
+            if (SDL_PollEvent(&event) != 0) {
+                if (event.type == SDL_QUIT) {
                     // Break out of the loop on quit
                     break;
                 }
+                if (event.type == SDL_MOUSEBUTTONUP) {
+                    onclick(event.button.x, event.button.y);
+                }
 
-                p();
+                repaint();
             }
         }
     }

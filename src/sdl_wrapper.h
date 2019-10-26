@@ -65,5 +65,6 @@ namespace sdl_wrapper {
         void update_surface();
     };
 
-    void quick_and_dirty_sdl_loop(std::function<void()> p);
+    void quick_and_dirty_sdl_loop(std::function<void()> repaint,
+        const std::function<void(int x, int y)> onclick);
 }
