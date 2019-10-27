@@ -134,7 +134,8 @@ namespace joytracer {
             return found->color();
         }
 
-        auto result_color = found->color();
+        std::vector<std::array<double, 3>> accumulated_results;
+        accumulated_results.push_back(found->color());
 
         for (int i = 0; i < reflect; ++i) {
             ray_to_trace = Ray(
@@ -147,10 +148,11 @@ namespace joytracer {
                 break;
             }
 
-            result_color = (result_color * 2.0 + found->color()) / 3.0;
+            accumulated_results.insert(accumulated_results.begin(), found->color());
         }
 
-        return result_color;
+        return std::accumulate(accumulated_results.begin() + 1, accumulated_results.end(), *accumulated_results.begin(),
+            [&](auto accumulation, auto current) -> auto { return (accumulation + current * 2.0) / 3.0; });
     }
 
     void Camera::set_orientation(const std::array<double, 3> &orientation) {
