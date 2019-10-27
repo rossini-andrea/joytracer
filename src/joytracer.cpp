@@ -20,7 +20,7 @@ namespace joytracer {
             plane_normal) / denom;
 
         // Ignore if behind
-        if (distance <= 0.0) {
+        if (distance <= epsilon) {
             return std::nullopt;
         }
 
@@ -51,7 +51,7 @@ namespace joytracer {
         if (dot(m_normal, cross(m_vertices[1] - m_vertices[0], hit_point - m_vertices[1])) > 0 &&
             dot(m_normal, cross(m_vertices[2] - m_vertices[1], hit_point - m_vertices[2])) > 0 &&
             dot(m_normal, cross(m_vertices[0] - m_vertices[2], hit_point - m_vertices[0])) > 0) {
-            return HitResult(projection->distance(), hit_point, m_color);
+            return HitResult(projection->distance(), hit_point, m_normal, m_color);
         }
 
         return std::nullopt;
@@ -68,6 +68,7 @@ namespace joytracer {
         long is_x_odd = static_cast<long>(floorf(hit_point[0])) & 1;
         long is_y_odd = static_cast<long>(floorf(hit_point[1])) & 1;
         return HitResult(projection->distance(), hit_point,
+            {0.0, 0.0, 1.0},
             (is_x_odd == is_y_odd) ?
             std::array<double, 3>{1.0, 1.0, 1.0} :
             std::array<double, 3>{0.0, 0.0, 0.0});
@@ -86,16 +87,24 @@ namespace joytracer {
         }
 
         double distance = square <= epsilon ?
-            - projection :
-            - std::sqrt(square) - projection;
+            -projection :
+            -projection - std::sqrt(square);
+
+        // Ignore if behind
+        if (distance <= epsilon) {
+            return std::nullopt;
+        }
+
+        auto hit_point = ray.get_origin() + ray.get_normal() * distance;
 
         return HitResult(
             distance,
-            ray.get_origin() + ray.get_normal() * distance,
+            hit_point,
+            normalize(hit_point - m_center),
             m_color);
     }
 
-    std::array<double, 3> Scene::trace_ray(const Ray &ray) const {
+    std::optional<HitResult> Scene::trace_single_ray(const Ray &ray) const {
         std::vector<std::optional<HitResult>> hits;
         std::transform(m_surfaces.begin(), m_surfaces.end(),
             std::back_inserter(hits),
@@ -105,7 +114,45 @@ namespace joytracer {
             [] (auto &a, auto &b) -> bool {
                 return (a->distance() < b->distance());
             });
-        return found != hits_end ? found->value().color() : m_sky_color;
+
+        if (found == hits_end) {
+            return std::nullopt;
+        }
+
+        return *found;
+    }
+
+    std::array<double, 3> Scene::trace_ray(const Ray &ray, int reflect) const {
+        auto ray_to_trace = ray;
+        auto found = trace_single_ray(ray_to_trace);
+
+        if (!found) {
+            return m_sky_color;
+        }
+
+        if (reflect == 0) {
+            return found->color();
+        }
+
+        std::vector<std::array<double, 3>> accumulated_results;
+        accumulated_results.push_back(found->color());
+
+        for (int i = 0; i < reflect; ++i) {
+            ray_to_trace = Ray(
+                found->point(),
+                ray_to_trace.get_normal() + found->normal() * (std::fabs(dot(ray.get_normal(), found->normal())) * 2)
+            );
+            found = trace_single_ray(ray_to_trace);
+
+            if (!found) {
+                break;
+            }
+
+            accumulated_results.insert(accumulated_results.begin(), found->color());
+        }
+
+        return std::accumulate(accumulated_results.begin() + 1, accumulated_results.end(), *accumulated_results.begin(),
+            [&](auto accumulation, auto current) -> auto { return (accumulation + current * 2.0) / 3.0; });
     }
 
     void Camera::set_orientation(const std::array<double, 3> &orientation) {
@@ -131,7 +178,7 @@ namespace joytracer {
                 frame[y * width + x] = scene.trace_ray(Ray(
                     m_position,
                     normalize(std::array<double, 3>{surface_x, m_focal_distance, surface_y})
-                ));
+                ), 10);
             }
         }
 

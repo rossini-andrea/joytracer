@@ -59,13 +59,15 @@ namespace joytracer {
     private:
         double m_distance;
         std::array<double, 3> m_point;
+        std::array<double, 3> m_normal;
         std::array<double, 3> m_color;
     public:
         HitResult(
             double distance,
             const std::array<double, 3> &point,
+            const std::array<double, 3> &normal,
             const std::array<double, 3> &color
-        ) : m_distance(distance), m_point(point), m_color(color) {}
+        ) : m_distance(distance), m_point(point), m_normal(normal), m_color(color) {}
 
         double distance() const {
             return m_distance;
@@ -73,6 +75,10 @@ namespace joytracer {
 
         const std::array<double, 3> &point() const {
             return m_point;
+        }
+
+        const std::array<double, 3> &normal() const {
+            return m_normal;
         }
 
         const std::array<double, 3> &color() const {
@@ -141,14 +147,14 @@ namespace joytracer {
         std::vector<std::unique_ptr<Surface>> m_surfaces;
         std::array<double, 3> m_sky_color;
 
+        std::optional<HitResult> trace_single_ray(const Ray &ray) const;
     public:
         Scene(
             std::vector<std::unique_ptr<Surface>> surfaces,
             const std::array<double, 3> &sky_color
         ) : m_surfaces(std::move(surfaces)),
         m_sky_color(sky_color) {}
-        std::array<double, 3> trace_ray(const Ray &ray) const;
-
+        std::array<double, 3> trace_ray(const Ray &ray, int reflect) const;
     };
 
     /*
