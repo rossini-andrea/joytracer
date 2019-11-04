@@ -78,24 +78,28 @@ auto make_scene_surfaces() {
 }
 
 int main() {
+    const int screen_width = 640;
+    const int screen_height = 480;
+
     sdl_wrapper::SDL sdl;
-    sdl_wrapper::SDLWindow sdl_window("Joytracer", 640, 480);
+    sdl_wrapper::SDLWindow sdl_window("Joytracer", screen_width, screen_height);
     sdl_wrapper::SDLSurface main_surface = sdl_window.get_surface();
-    sdl_wrapper::SDLSurface backbuffer(0, 640, 480, 32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
+    sdl_wrapper::SDLSurface backbuffer(0, screen_width, screen_height, 32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
     joytracer::Scene test_scene(
         make_scene_surfaces(),
-        {0.0, 0.40, 0.80}
+        {0.0, 0.40, 0.80},
+        joytracer::normalize(std::array{1.0, 1.0, -1.0})
     );
     joytracer::Camera fixed_camera{};
     fixed_camera.set_focal_distance(1.0);
-    fixed_camera.set_plane_size(1.0, 480.0 / 640.0);
+    fixed_camera.set_plane_size(1.0, static_cast<double>(screen_height) / static_cast<double>(screen_width));
     fixed_camera.set_position({0.0, 0.0, 1.77});
-    auto fixed_frame = fixed_camera.render_scene(test_scene, 640, 480);
+    auto fixed_frame = fixed_camera.render_scene(test_scene, screen_width, screen_height);
     backbuffer.lock();
 
-    for (int y = 0; y < 480; ++y) {
-        for (int x = 0; x < 640; ++x) {
-            int i = y * 640 + x;
+    for (int y = 0; y < screen_height; ++y) {
+        for (int x = 0; x < screen_width; ++x) {
+            int i = y * screen_width + x;
             backbuffer.set_pixel(x, y, 0xff000000 |
                 (static_cast<uint32_t>(255 * fixed_frame[i][0])) |
                 (static_cast<uint32_t>(255 * fixed_frame[i][1])) << 8 |
@@ -112,8 +116,10 @@ int main() {
         },
         // onclick
         [&](int x, int y) -> void {
-            double surface_y = (480.0 / 640.0) * (0.5 - static_cast<double>(y) / 480);
-            double surface_x = (static_cast<double>(x) / 640 - 0.5);
+            double surface_y =
+                (static_cast<double>(screen_height) / static_cast<double>(screen_width)) *
+                (0.5 - static_cast<double>(y) / static_cast<double>(screen_height));
+            double surface_x = (static_cast<double>(x) / screen_width - 0.5);
             auto color = test_scene.trace_ray(joytracer::Ray(
                         {0.0, 0.0, 1.77},
                         joytracer::normalize(std::array<double, 3>{surface_x, 1.0, surface_y})

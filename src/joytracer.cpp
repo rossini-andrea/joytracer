@@ -1,9 +1,26 @@
 #include <algorithm>
 
+#include "hammersley.h"
 #include "joymath.h"
 #include "joytracer.h"
 
 namespace joytracer {
+
+    auto make_hammersley_points() {
+        const int max_points = 20;
+        std::vector<std::array<double, 3>> points(max_points);
+        uint32_t i(0);
+        std::generate_n(points.begin(), max_points, [&](){
+            auto uv = hammersley::hammersley2d(i, max_points); ++i;
+            return hammersley::hemispheresample_uniform(uv[0], uv[1]);
+        });
+        //auto rays_end = std::remove_if(points.begin(), points.end(), [](auto &r) -> bool { return r[2] < epsilon; } );
+        //points.erase(points.begin(), rays_end);
+        return points;
+    }
+
+    std::vector<std::array<double, 3>> hammersley_points = make_hammersley_points();
+
     std::optional<HitPoint> project_ray_on_plane(
         const Ray &ray,
         const std::array<double, 3> &plane_origin,
@@ -110,49 +127,48 @@ namespace joytracer {
             std::back_inserter(hits),
             [=] (auto &s) -> auto { return s->hit_test(ray); });
         auto hits_end = std::remove_if(hits.begin(), hits.end(), [](auto &h) -> bool { return !h.has_value(); } );
-        auto found = std::min_element(hits.begin(), hits_end,
+        auto nearest_hit = std::min_element(hits.begin(), hits_end,
             [] (auto &a, auto &b) -> bool {
                 return (a->distance() < b->distance());
             });
 
-        if (found == hits_end) {
+        if (nearest_hit == hits_end) {
             return std::nullopt;
         }
 
-        return *found;
+        return *nearest_hit;
     }
 
     std::array<double, 3> Scene::trace_ray(const Ray &ray, int reflect) const {
-        auto ray_to_trace = ray;
-        auto found = trace_single_ray(ray_to_trace);
-
-        if (!found) {
-            return m_sky_color;
-        }
-
         if (reflect == 0) {
-            return found->color();
+            return {0,0,0};
         }
 
-        std::vector<std::array<double, 3>> accumulated_results;
-        accumulated_results.push_back(found->color());
+        auto nearest_hit = trace_single_ray(ray);
 
-        for (int i = 0; i < reflect; ++i) {
-            ray_to_trace = Ray(
-                found->point(),
-                ray_to_trace.get_normal() + found->normal() * (std::fabs(dot(ray.get_normal(), found->normal())) * 2)
-            );
-            found = trace_single_ray(ray_to_trace);
-
-            if (!found) {
-                break;
-            }
-
-            accumulated_results.insert(accumulated_results.begin(), found->color());
+        if (!nearest_hit) {
+            auto sun_exposure = 0.5 - dot(ray.get_normal(), m_sunlight_normal) / 2.0;
+            return m_sky_color * (1.0 - sun_exposure) + std::array{1.0, 1.0, 1.0} * sun_exposure;
         }
 
-        return std::accumulate(accumulated_results.begin() + 1, accumulated_results.end(), *accumulated_results.begin(),
-            [&](auto accumulation, auto current) -> auto { return (accumulation + current * 2.0) / 3.0; });
+        auto base_color = nearest_hit->color();
+        auto reflection_color = trace_ray(Ray(
+            nearest_hit->point(),
+            ray.get_normal() + nearest_hit->normal() * (std::fabs(dot(ray.get_normal(), nearest_hit->normal())) * 2)
+        ), reflect - 1);
+
+        auto orthonormal_matrix = normal_to_orthonormal_matrix(nearest_hit->normal());
+        std::vector<std::array<double, 3>> light_levels(hammersley_points.size());
+        std::transform(hammersley_points.begin(), hammersley_points.end(), light_levels.begin(),
+            [&] (const auto &hemisphere_point) -> auto {
+            return trace_ray(Ray(
+                nearest_hit->point(),
+                dot(hemisphere_point, orthonormal_matrix)
+            ), reflect - 1);
+        });
+        auto light_color = std::accumulate(light_levels.begin(), light_levels.end(), std::array{0.0, 0.0, 0.0},
+            [](const auto &a, const auto &b) -> auto {return a + b;}) / static_cast<double>(light_levels.size());
+        return ((base_color * light_color) * 2.0 + reflection_color) / 3.0;
     }
 
     void Camera::set_orientation(const std::array<double, 3> &orientation) {

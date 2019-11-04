@@ -146,14 +146,17 @@ namespace joytracer {
     private:
         std::vector<std::unique_ptr<Surface>> m_surfaces;
         std::array<double, 3> m_sky_color;
+        std::array<double, 3> m_sunlight_normal;
 
         std::optional<HitResult> trace_single_ray(const Ray &ray) const;
     public:
         Scene(
             std::vector<std::unique_ptr<Surface>> surfaces,
-            const std::array<double, 3> &sky_color
+            const std::array<double, 3> &sky_color,
+            const std::array<double, 3> &sunlight_normal
         ) : m_surfaces(std::move(surfaces)),
-        m_sky_color(sky_color) {}
+        m_sky_color(sky_color),
+        m_sunlight_normal(sunlight_normal) {}
         std::array<double, 3> trace_ray(const Ray &ray, int reflect) const;
     };
 

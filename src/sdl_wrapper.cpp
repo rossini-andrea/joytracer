@@ -85,8 +85,8 @@ namespace sdl_wrapper {
     }
 
     void quick_and_dirty_sdl_loop(
-        const std::function<void()> repaint,
-        const std::function<void(int x, int y)> onclick
+        const std::function<void()> &repaint,
+        const std::function<void(int x, int y)> &onclick
     ) {
         while (true) {
             // Get the next event
