@@ -1,6 +1,6 @@
 # joytracer - a raytracer demo
 
-![An early screenshot from the reflect branch.](docs/pictures/shot001.png)
+![A screenshot from the sun branch.](docs/pictures/shot002.png)
 
 This project is a raytracer demo. The purpose of this project is to learn as much as possible about C++11, 14, and 17.
 

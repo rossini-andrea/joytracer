@@ -116,15 +116,10 @@ int main() {
         },
         // onclick
         [&](int x, int y) -> void {
-            double surface_y =
-                (static_cast<double>(screen_height) / static_cast<double>(screen_width)) *
-                (0.5 - static_cast<double>(y) / static_cast<double>(screen_height));
-            double surface_x = (static_cast<double>(x) / screen_width - 0.5);
-            auto color = test_scene.trace_ray(joytracer::Ray(
-                        {0.0, 0.0, 1.77},
-                        joytracer::normalize(std::array<double, 3>{surface_x, 1.0, surface_y})
-                    ), 10);
-            std::cout << "Color of clicked point: " << color[0] << ", " << color[1] << ", " << color[2] << ", " << '\n';
+            auto color = fixed_camera.test_point(test_scene, screen_width, screen_height, x, y);
+            std::cout
+                << "Color of (" << x << "," << y << "): "
+                << color[0] << ", " << color[1] << ", " << color[2] << ", " << '\n';
         }
     );
     return 0;

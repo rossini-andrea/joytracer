@@ -1,25 +1,34 @@
 #include <algorithm>
+#include <random>
 
 #include "hammersley.h"
 #include "joymath.h"
 #include "joytracer.h"
 
 namespace joytracer {
+    class RandomHammersleyPoint {
+        private:
+            std::vector<std::array<double, 3>> m_points;
+            std::random_device m_random_device;
+            std::mt19937 m_random_engine;
+            std::uniform_int_distribution<int> m_random_distribution;
+        public:
+            RandomHammersleyPoint(int max_points) :
+                m_points(max_points),
+                m_random_device(),
+                m_random_engine(m_random_device()),
+                m_random_distribution(0, max_points - 1) {
+                uint32_t i(0);
+                std::generate_n(m_points.begin(), max_points, [&](){
+                    auto uv = hammersley::hammersley2d(i, max_points); ++i;
+                    return hammersley::hemispheresample_uniform(uv[0], uv[1]);
+                });
+            }
 
-    auto make_hammersley_points() {
-        const int max_points = 20;
-        std::vector<std::array<double, 3>> points(max_points);
-        uint32_t i(0);
-        std::generate_n(points.begin(), max_points, [&](){
-            auto uv = hammersley::hammersley2d(i, max_points); ++i;
-            return hammersley::hemispheresample_uniform(uv[0], uv[1]);
-        });
-        //auto rays_end = std::remove_if(points.begin(), points.end(), [](auto &r) -> bool { return r[2] < epsilon; } );
-        //points.erase(points.begin(), rays_end);
-        return points;
-    }
-
-    std::vector<std::array<double, 3>> hammersley_points = make_hammersley_points();
+            std::array<double, 3> operator()() {
+                return m_points.at(m_random_distribution(m_random_engine));
+            }
+    };
 
     std::optional<HitPoint> project_ray_on_plane(
         const Ray &ray,
@@ -139,6 +148,36 @@ namespace joytracer {
         return *nearest_hit;
     }
 
+    std::array<double, 3> Scene::trace_and_bounce_ray(const Ray &ray, int reflect) const {
+        if (reflect == 0) {
+            return {0,0,0};
+        }
+
+        auto nearest_hit = trace_single_ray(ray);
+
+        if (!nearest_hit) {
+            auto sun_exposure = (1.0 - dot(ray.get_normal(), m_sunlight_normal)) / 2.0;
+            sun_exposure = sun_exposure > 0.9 ? 1.0 : sun_exposure;
+            return m_sky_color * (1.0 - sun_exposure) + std::array{1.0, 1.0, 1.0} * sun_exposure;
+        }
+
+        return (nearest_hit->color() * trace_ray(Ray(
+            nearest_hit->point(),
+            ray.get_normal() + nearest_hit->normal() * (std::fabs(dot(ray.get_normal(), nearest_hit->normal())) * 2)
+        ), reflect - 1));
+    }
+
+    RandomHammersleyPoint random_hemisphere_point(1000);
+    std::vector<std::array<double, 3>> hemisphere_points = ([]() -> auto {
+        uint32_t i(0);
+        std::vector<std::array<double, 3>> points(10);
+        std::generate_n(points.begin(), points.size(), [&](){
+            auto uv = hammersley::hammersley2d(i, points.size()); ++i;
+            return hammersley::hemispheresample_uniform(uv[0], uv[1]);
+        });
+        return points;
+    })();
+
     std::array<double, 3> Scene::trace_ray(const Ray &ray, int reflect) const {
         if (reflect == 0) {
             return {0,0,0};
@@ -147,27 +186,31 @@ namespace joytracer {
         auto nearest_hit = trace_single_ray(ray);
 
         if (!nearest_hit) {
-            auto sun_exposure = 0.5 - dot(ray.get_normal(), m_sunlight_normal) / 2.0;
+            auto sun_exposure = (1.0 - dot(ray.get_normal(), m_sunlight_normal)) / 2.0;
+            sun_exposure = sun_exposure > 0.9 ? 1.0 : sun_exposure;
             return m_sky_color * (1.0 - sun_exposure) + std::array{1.0, 1.0, 1.0} * sun_exposure;
         }
 
         auto base_color = nearest_hit->color();
-        auto reflection_color = trace_ray(Ray(
+        auto reflection_color = trace_and_bounce_ray(Ray(
             nearest_hit->point(),
             ray.get_normal() + nearest_hit->normal() * (std::fabs(dot(ray.get_normal(), nearest_hit->normal())) * 2)
         ), reflect - 1);
 
         auto orthonormal_matrix = normal_to_orthonormal_matrix(nearest_hit->normal());
-        std::vector<std::array<double, 3>> light_levels(hammersley_points.size());
-        std::transform(hammersley_points.begin(), hammersley_points.end(), light_levels.begin(),
-            [&] (const auto &hemisphere_point) -> auto {
-            return trace_ray(Ray(
-                nearest_hit->point(),
-                dot(hemisphere_point, orthonormal_matrix)
-            ), reflect - 1);
-        });
-        auto light_color = std::accumulate(light_levels.begin(), light_levels.end(), std::array{0.0, 0.0, 0.0},
-            [](const auto &a, const auto &b) -> auto {return a + b;}) / static_cast<double>(light_levels.size());
+        auto light_color = std::accumulate(hemisphere_points.begin(), hemisphere_points.end(), std::array{0.0, 0.0, 0.0},
+            [&](const auto &accum, const auto &hemisphere_point) -> auto {
+                return accum + trace_and_bounce_ray(Ray(
+                    nearest_hit->point(),
+                    dot(hemisphere_point, orthonormal_matrix)
+                ), reflect - 1);
+            }) / static_cast<double>(hemisphere_points.size());
+        /*
+         trace_and_bounce_ray(Ray(
+            nearest_hit->point(),
+            dot(random_hemisphere_point(), orthonormal_matrix)
+        ), reflect - 1);*/
+
         return ((base_color * light_color) * 2.0 + reflection_color) / 3.0;
     }
 
@@ -199,5 +242,14 @@ namespace joytracer {
         }
 
         return frame;
+    }
+
+    std::array<double, 3> Camera::test_point(const Scene &scene, int width, int height, int x, int y) {
+        double surface_y = m_plane_height * (0.5 - static_cast<double>(y) / height);
+        double surface_x = m_plane_width * (static_cast<double>(x) / width - 0.5);
+        return scene.trace_ray(Ray(
+            m_position,
+            normalize(std::array<double, 3>{surface_x, m_focal_distance, surface_y})
+        ), 10);
     }
 } // namespace joytracer

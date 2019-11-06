@@ -149,6 +149,7 @@ namespace joytracer {
         std::array<double, 3> m_sunlight_normal;
 
         std::optional<HitResult> trace_single_ray(const Ray &ray) const;
+        std::array<double, 3> trace_and_bounce_ray(const Ray &ray, int reflect) const;
     public:
         Scene(
             std::vector<std::unique_ptr<Surface>> surfaces,
@@ -189,5 +190,6 @@ namespace joytracer {
         }
 
         std::vector<std::array<double, 3>> render_scene(const Scene &scene, int width, int height);
+        std::array<double, 3> test_point(const Scene &scene, int width, int height, int x, int y);
     };
 }

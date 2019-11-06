@@ -88,12 +88,12 @@ namespace joytracer {
         return result;
     }
 
-    template<class T>
-    constexpr std::array<std::array<T, 3>, 3> normal_to_orthonormal_matrix(const std::array<T, 3> &n) {
-        auto xy_length = std::sqrt(n[0]*n[0] + n[1]*n[1]);
+    constexpr std::array<std::array<double, 3>, 3> normal_to_orthonormal_matrix(const std::array<double, 3> &n) {
+        std::array right{1.0, 0.0, 0.0};
+        auto forward = cross(n, right);
         return std::array{
-            std::array<T, 3>{n[1] / xy_length,     -n[0] / xy_length,      0},
-            std::array<T, 3>{n[0]*n[2] / xy_length, n[1]*n[2] / xy_length, -xy_length},
+            cross(forward, n),
+            forward,
             n
         };
     }
@@ -105,10 +105,10 @@ namespace joytracer {
         std::array<T, 3> result;
         uint32_t i(0);
         std::generate_n(result.begin(), 3, [&](){
-            uint32_t i1 = i++;
+            uint32_t column = i++;
             return std::inner_product(vec.begin(), vec.end(), matrix.begin(), T(0),
                 [](const auto &a, const auto &b){ return a + b; },
-                [=](const auto &vec_element, const auto &mat_row){ return vec_element * mat_row[i1]; }
+                [=](const auto &vec_element, const auto &mat_row){ return vec_element * mat_row[column]; }
             );
         });
 
