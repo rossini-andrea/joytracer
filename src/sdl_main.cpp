@@ -44,8 +44,8 @@ auto make_pyramid() {
     // East face
     v.push_back(std::make_unique<joytracer::Triangle>(
         std::array<std::array<double, 3>, 3>({
-            std::array<double, 3>{7.0, 22.0, 0.0},
             std::array<double, 3>{7.0, 14.0, 0.0},
+            std::array<double, 3>{7.0, 22.0, 0.0},
             std::array<double, 3>{3.0, 18.0, 5.0}
         }),
         std::array<double, 3>{0.8, 0.8, 0.4}
@@ -93,7 +93,9 @@ int main() {
     joytracer::Camera fixed_camera{};
     fixed_camera.set_focal_distance(1.0);
     fixed_camera.set_plane_size(1.0, static_cast<double>(screen_height) / static_cast<double>(screen_width));
-    fixed_camera.set_position({0.0, 0.0, 1.77});
+    //fixed_camera.set_position({0.0, 0.0, 1.77});
+    fixed_camera.set_position({-2.0, 26.0, 1.77});
+    fixed_camera.set_orientation({0.0, std::acos(-1) * 1.5, 0.0});
     auto fixed_frame = fixed_camera.render_scene(test_scene, screen_width, screen_height);
     backbuffer.lock();
 

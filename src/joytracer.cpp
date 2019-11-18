@@ -18,9 +18,10 @@ namespace joytracer {
                 m_random_device(),
                 m_random_engine(m_random_device()),
                 m_random_distribution(0, max_points - 1) {
-                uint32_t i(0);
-                std::generate_n(m_points.begin(), max_points, [&](){
-                    auto uv = hammersley::hammersley2d(i, max_points); ++i;
+                std::vector<int> range(max_points);
+                std::iota(range.begin(), range.end(), 0);
+                std::transform(range.begin(), range.end(), m_points.begin(), [&](auto &i) -> auto{
+                    auto uv = hammersley::hammersley2d(i, max_points);
                     return hammersley::hemispheresample_uniform(uv[0], uv[1]);
                 });
             }
@@ -157,7 +158,7 @@ namespace joytracer {
 
         if (!nearest_hit) {
             auto sun_exposure = (1.0 - dot(ray.get_normal(), m_sunlight_normal)) / 2.0;
-            sun_exposure = sun_exposure > 0.9 ? 1.0 : sun_exposure;
+            sun_exposure = sun_exposure >= 0.999 ? 1.0 : sun_exposure / 2.0;
             return m_sky_color * (1.0 - sun_exposure) + std::array{1.0, 1.0, 1.0} * sun_exposure;
         }
 
@@ -170,7 +171,7 @@ namespace joytracer {
     RandomHammersleyPoint random_hemisphere_point(1000);
     std::vector<std::array<double, 3>> hemisphere_points = ([]() -> auto {
         uint32_t i(0);
-        std::vector<std::array<double, 3>> points(10);
+        std::vector<std::array<double, 3>> points(100);
         std::generate_n(points.begin(), points.size(), [&](){
             auto uv = hammersley::hammersley2d(i, points.size()); ++i;
             return hammersley::hemispheresample_uniform(uv[0], uv[1]);
@@ -187,7 +188,7 @@ namespace joytracer {
 
         if (!nearest_hit) {
             auto sun_exposure = (1.0 - dot(ray.get_normal(), m_sunlight_normal)) / 2.0;
-            sun_exposure = sun_exposure > 0.9 ? 1.0 : sun_exposure;
+            sun_exposure = sun_exposure >= 0.999 ? 1.0 : sun_exposure / 2.0;
             return m_sky_color * (1.0 - sun_exposure) + std::array{1.0, 1.0, 1.0} * sun_exposure;
         }
 
@@ -197,13 +198,14 @@ namespace joytracer {
             ray.get_normal() + nearest_hit->normal() * (std::fabs(dot(ray.get_normal(), nearest_hit->normal())) * 2)
         ), reflect - 1);
 
-        auto orthonormal_matrix = normal_to_orthonormal_matrix(nearest_hit->normal());
+        auto orthonormal_matrix = normal_to_orthonormal_matrix(nearest_hit->normal(), {1.0, 0.0, 0.0});
+        std::rotate(orthonormal_matrix.begin(), orthonormal_matrix.begin() + 1, orthonormal_matrix.end());
         auto light_color = std::accumulate(hemisphere_points.begin(), hemisphere_points.end(), std::array{0.0, 0.0, 0.0},
             [&](const auto &accum, const auto &hemisphere_point) -> auto {
                 return accum + trace_and_bounce_ray(Ray(
                     nearest_hit->point(),
                     dot(hemisphere_point, orthonormal_matrix)
-                ), reflect - 1);
+                ), 1);
             }) / static_cast<double>(hemisphere_points.size());
         /*
          trace_and_bounce_ray(Ray(
@@ -215,15 +217,21 @@ namespace joytracer {
     }
 
     void Camera::set_orientation(const std::array<double, 3> &orientation) {
-        // KISS: Write a first version that can render looking down the Y axis!
-        /*double length = std::cos(orientation[0]);
-        m_lookat = normalize<double, 3>({
-            length * std::sin(orientation[1]),
-            length * std::cos(orientation[1]),
+        double horizontal_length = std::cos(orientation[0]);
+        double yaw_cos = std::cos(orientation[1]);
+        double yaw_sin = std::sin(orientation[1]);
+        auto lookat = normalize<double, 3>({
+            horizontal_length * yaw_cos,
+            horizontal_length * yaw_sin,
             std::sin(orientation[0])
         });
-        m_camera_up =
-        m_orientation = orientation;*/
+        auto left = normalize<double, 3>({
+            -yaw_sin,
+            yaw_cos,
+            0.0
+        });
+        m_view_transform = normal_to_orthonormal_matrix(lookat, left);
+        m_orientation = orientation;
     }
 
     std::vector<std::array<double, 3>> Camera::render_scene(const Scene &scene, int width, int height) {
@@ -236,7 +244,7 @@ namespace joytracer {
                 double surface_x = m_plane_width * (static_cast<double>(x) / width - 0.5);
                 frame[y * width + x] = scene.trace_ray(Ray(
                     m_position,
-                    normalize(std::array<double, 3>{surface_x, m_focal_distance, surface_y})
+                    dot(normalize(std::array{m_focal_distance, -surface_x, surface_y}), m_view_transform)
                 ), 10);
             }
         }
@@ -249,7 +257,7 @@ namespace joytracer {
         double surface_x = m_plane_width * (static_cast<double>(x) / width - 0.5);
         return scene.trace_ray(Ray(
             m_position,
-            normalize(std::array<double, 3>{surface_x, m_focal_distance, surface_y})
+            dot(normalize(std::array{m_focal_distance, -surface_x, surface_y}), m_view_transform)
         ), 10);
     }
 } // namespace joytracer

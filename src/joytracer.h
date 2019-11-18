@@ -169,8 +169,7 @@ namespace joytracer {
     private:
         std::array<double, 3> m_position;
         std::array<double, 3> m_orientation;
-        std::array<double, 3> m_lookat;
-        std::array<double, 3> m_camera_up;
+        std::array<std::array<double, 3>, 3> m_view_transform;
         double m_focal_distance;
         double m_plane_width, m_plane_height;
     public:

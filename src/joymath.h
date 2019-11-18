@@ -88,13 +88,14 @@ namespace joytracer {
         return result;
     }
 
-    constexpr std::array<std::array<double, 3>, 3> normal_to_orthonormal_matrix(const std::array<double, 3> &n) {
-        std::array right{1.0, 0.0, 0.0};
-        auto forward = cross(n, right);
+    constexpr std::array<std::array<double, 3>, 3> normal_to_orthonormal_matrix(
+        const std::array<double, 3> &first_normal,
+        const std::array<double, 3> &second_normal) {
+        auto third_normal = cross(first_normal, second_normal);
         return std::array{
-            cross(forward, n),
-            forward,
-            n
+            first_normal,
+            cross(third_normal, first_normal),
+            third_normal
         };
     }
 
