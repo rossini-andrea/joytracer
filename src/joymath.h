@@ -91,7 +91,7 @@ namespace joytracer {
     constexpr std::array<std::array<double, 3>, 3> normal_to_orthonormal_matrix(
         const std::array<double, 3> &first_normal,
         const std::array<double, 3> &second_normal) {
-        auto third_normal = cross(first_normal, second_normal);
+        auto third_normal = normalize(cross(first_normal, second_normal));
         return std::array{
             first_normal,
             cross(third_normal, first_normal),

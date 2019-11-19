@@ -31,14 +31,14 @@ namespace joytracer {
             }
     };
 
-    std::optional<HitPoint> project_ray_on_plane(
+    std::optional<HitPoint> project_ray_on_plane_frontface(
         const Ray &ray,
         const std::array<double, 3> &plane_origin,
         const std::array<double, 3> &plane_normal) {
         // Calculate if it may hit
         auto denom = dot(ray.get_normal(), plane_normal);
 
-        if (denom > -epsilon && denom < epsilon) {
+        if (denom > -epsilon) {
             return std::nullopt;
         }
 
@@ -65,7 +65,7 @@ namespace joytracer {
     }
 
     std::optional<HitResult> Triangle::hit_test(const Ray &ray) const {
-        auto projection = project_ray_on_plane(ray, *m_vertices.begin(), m_normal);
+        auto projection = project_ray_on_plane_frontface(ray, *m_vertices.begin(), m_normal);
 
         if (!projection) {
             return std::nullopt;
@@ -85,7 +85,7 @@ namespace joytracer {
     }
 
     std::optional<HitResult> Floor::hit_test(const Ray &ray) const {
-        auto projection = project_ray_on_plane(ray, {0.0, 0.0, 0.0}, {0.0, 0.0, 1.0});
+        auto projection = project_ray_on_plane_frontface(ray, {0.0, 0.0, 0.0}, {0.0, 0.0, 1.0});
 
         if (!projection) {
             return std::nullopt;
