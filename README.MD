@@ -1,12 +1,29 @@
 # joytracer - a raytracer demo
 
+![A screenshot from the sun branch.](docs/pictures/shot003.png)
+
 This project is a raytracer demo. The purpose of this project is to learn as much as possible about C++11, 14, and 17.
 
 ## Requirements
 
 This is what I am using:
 
-* gcc (GCC) 9.2.0
-* SDL2
+* gcc and clang alternately.
+* cmake 3.6
+* SDL 2 library
 
-I am not currently planning to test compatibility with other software versions.
+## Building
+
+To build and run the project, type the commands:
+
+```sh
+export CC=/usr/bin/clang
+export CXX=/usr/bin/clang++
+mkdir build
+cd build
+cmake ..
+make
+./joytracer
+```
+
+Enjoy!

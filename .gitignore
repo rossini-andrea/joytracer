@@ -1,3 +1,8 @@
+.vs
 .vscode
+CMakeSettings.json
 build
+debug
+out
 joytracer
+makefile
