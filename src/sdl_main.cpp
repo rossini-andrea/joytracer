@@ -93,9 +93,8 @@ int main() {
     joytracer::Camera fixed_camera{};
     fixed_camera.set_focal_distance(1.0);
     fixed_camera.set_plane_size(1.0, static_cast<double>(screen_height) / static_cast<double>(screen_width));
-    //fixed_camera.set_position({0.0, 0.0, 1.77});
-    fixed_camera.set_position({-4.0, 10.0, 1.77});
-    fixed_camera.set_orientation({0.0, std::acos(-1) * 1.75, 0.0});
+    fixed_camera.set_position({0.0, 0.0, 1.77});
+    fixed_camera.set_orientation({0.0, std::acos(-1) * 0.50, 0.0});
     auto fixed_frame = fixed_camera.render_scene(test_scene, screen_width, screen_height);
     backbuffer.lock();
 

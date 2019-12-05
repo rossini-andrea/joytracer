@@ -198,22 +198,26 @@ namespace joytracer {
             ray.get_normal() + nearest_hit->normal() * (std::fabs(dot(ray.get_normal(), nearest_hit->normal())) * 2)
         ), reflect - 1);
 
+        bool direct_light = !trace_single_ray(Ray(
+            nearest_hit->point(),
+            m_sunlight_normal * -1.0
+        ));
+
+        if (direct_light) {
+            return (base_color * 2.0 + reflection_color) / 3.0;
+        }
+
         auto orthonormal_matrix = normal_to_orthonormal_matrix(nearest_hit->normal(), {1.0, 0.0, 0.0});
         std::rotate(orthonormal_matrix.begin(), orthonormal_matrix.begin() + 1, orthonormal_matrix.end());
-        auto light_color = std::accumulate(hemisphere_points.begin(), hemisphere_points.end(), std::array{0.0, 0.0, 0.0},
+        auto diffuse_light = std::accumulate(hemisphere_points.begin(), hemisphere_points.end(), std::array{0.0, 0.0, 0.0},
             [&](const auto &accum, const auto &hemisphere_point) -> auto {
                 return accum + trace_and_bounce_ray(Ray(
                     nearest_hit->point(),
                     dot(hemisphere_point, orthonormal_matrix)
                 ), 1);
-            }) / static_cast<double>(hemisphere_points.size());
-        /*
-         trace_and_bounce_ray(Ray(
-            nearest_hit->point(),
-            dot(random_hemisphere_point(), orthonormal_matrix)
-        ), reflect - 1);*/
+        }) / static_cast<double>(hemisphere_points.size());
 
-        return ((base_color * light_color) * 2.0 + reflection_color) / 3.0;
+        return ((base_color * diffuse_light) * 2.0 + reflection_color) / 3.0;
     }
 
     void Camera::set_orientation(const std::array<double, 3> &orientation) {
