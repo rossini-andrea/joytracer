@@ -207,7 +207,9 @@ namespace joytracer {
             return (base_color * 2.0 + reflection_color) / 3.0;
         }
 
-        auto orthonormal_matrix = normal_to_orthonormal_matrix(nearest_hit->normal(), {1.0, 0.0, 0.0});
+        auto orthonormal_matrix = normal_to_orthonormal_matrix(
+            nearest_hit->normal(), normal_to_orthogonal(nearest_hit->normal())
+        );
         std::rotate(orthonormal_matrix.begin(), orthonormal_matrix.begin() + 1, orthonormal_matrix.end());
         auto diffuse_light = std::accumulate(hemisphere_points.begin(), hemisphere_points.end(), std::array{0.0, 0.0, 0.0},
             [&](const auto &accum, const auto &hemisphere_point) -> auto {

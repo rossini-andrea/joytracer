@@ -88,6 +88,14 @@ namespace joytracer {
         return result;
     }
 
+    constexpr std::array<double, 3> normal_to_orthogonal(const std::array<double, 3> normal) {
+        return std::array{
+            normal[1] - normal[2],
+            -normal[0] + normal[2],
+            normal[0] - normal[1]
+        };
+    }
+
     constexpr std::array<std::array<double, 3>, 3> normal_to_orthonormal_matrix(
         const std::array<double, 3> &first_normal,
         const std::array<double, 3> &second_normal) {
