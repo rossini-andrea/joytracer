@@ -170,10 +170,12 @@ namespace joytracer {
 
     RandomHammersleyPoint random_hemisphere_point(1000);
     std::vector<std::array<double, 3>> hemisphere_points = ([]() -> auto {
-        uint32_t i(0);
-        std::vector<std::array<double, 3>> points(100);
-        std::generate_n(points.begin(), points.size(), [&](){
-            auto uv = hammersley::hammersley2d(i, points.size()); ++i;
+        const uint32_t point_count = 100;
+        std::vector<uint32_t> range(point_count);
+        std::vector<std::array<double, 3>> points(point_count);
+        std:iota(range.begin(), range.end(), 0);
+        std::transform(range.begin(), range.end(), points.begin(), [=](uint32_t i){
+            auto uv = hammersley::hammersley2d(i, point_count);
             return hammersley::hemispheresample_uniform(uv[0], uv[1]);
         });
         return points;
