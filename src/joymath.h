@@ -111,10 +111,10 @@ namespace joytracer {
     constexpr std::array<T, 3> dot(const std::array<T, 3> &vec,
         const std::array<std::array<T, 3>, 3> &matrix) {
 
+        std::array<uint32_t, 3> i;
         std::array<T, 3> result;
-        uint32_t i(0);
-        std::generate_n(result.begin(), 3, [&](){
-            uint32_t column = i++;
+        std::iota(i.begin(), i.end(), 0);
+        std::transform(i.begin(), i.end(), result.begin(), [&](uint32_t column){
             return std::inner_product(vec.begin(), vec.end(), matrix.begin(), T(0),
                 [](const auto &a, const auto &b){ return a + b; },
                 [=](const auto &vec_element, const auto &mat_row){ return vec_element * mat_row[column]; }
