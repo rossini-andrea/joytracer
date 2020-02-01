@@ -52,6 +52,10 @@ namespace sdl_wrapper {
         SDL_UnlockSurface(m_surface.get());
     }
 
+    bool SDLSurface::try_lock() {
+        return SDL_LockSurface(m_surface.get()) == 0;
+    }
+
     void SDLSurface::set_pixel(int x, int y, uint32_t pixel) {
         auto *target_pixel = reinterpret_cast<uint32_t*>(
             reinterpret_cast<uint8_t*>(m_surface->pixels) +

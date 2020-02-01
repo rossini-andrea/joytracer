@@ -39,6 +39,7 @@ namespace sdl_wrapper {
         // Dangerous! we should return a lock token!
         void lock();
         void unlock();
+        bool try_lock();
         void set_pixel(int x, int y, uint32_t pixel);
     };
 
