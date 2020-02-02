@@ -1,0 +1,52 @@
+<scene>
+    <sky-color>0.0, 0.40, 0.80</sky-color>
+    <sunlight-normal>1.0, 1.0, -1.0</sunlight-normal>
+    <!--Default zero level floor-->
+    <floor />
+    <!--South pyramid face-->
+    <triangle>
+        <vert>-1.0, 14.0, 0.0</vert>
+        <vert>7.0, 14.0, 0.0</vert>
+        <vert>3.0, 18.0, 5.0</vert>
+        <color>0.8, 0.8, 0.4</color>
+    </triangle>
+    <!--West pyramid face-->
+    <triangle>
+        <vert>-1.0, 22.0, 0.0</vert>
+        <vert>-1.0, 14.0, 0.0</vert>
+        <vert>3.0, 18.0, 5.0</vert>
+        <color>0.8, 0.8, 0.4</color>
+    </triangle>
+    <!--North pyramid face-->
+    <triangle>
+        <vert>7.0, 22.0, 0.0</vert>
+        <vert>-1.0, 22.0, 0.0</vert>
+        <vert>3.0, 18.0, 5.0</vert>
+        <color>0.8, 0.8, 0.4</color>
+    </triangle>
+    <!--East pyramid face-->
+    <triangle>
+        <vert>7.0, 14.0, 0.0</vert>
+        <vert>7.0, 22.0, 0.0</vert>
+        <vert>3.0, 18.0, 5.0</vert>
+        <color>0.8, 0.8, 0.4</color>
+    </triangle>
+    <!--Blue sphere-->
+    <sphere>
+        <radius>0.5</radius>
+        <center>1.0, 3.0, 0.5</center>
+        <color>0.0, 0.1, 1.0</color>
+    </sphere>
+    <!--Green sphere-->
+    <sphere>
+        <radius>0.5</radius>
+        <center>-1.0, 3.5, 0.5</center>
+        <color>0.0, 0.8, 0.1</color>
+    </sphere>
+    <!--White sphere-->
+    <sphere>
+        <radius>1.0</radius>
+        <center>0.0, 6.0, 1.0</center>
+        <color>1.0, 1.0, 1.0</color>
+    </sphere>
+</scene>

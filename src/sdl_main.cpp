@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <string>
 #include <mutex>
+#include <boost/property_tree/xml_parser.hpp>
 
 #include "joymath.h"
 #include "joytracer.h"
@@ -78,19 +79,98 @@ auto make_scene_surfaces() {
     return v;
 }
 
-int main() {
+// Custom translator for vec3
+class Vec3Translator
+{
+    typedef std::string           internal_type;
+    typedef std::array<double, 3> external_type;
+
+    // Converts a string to vec3
+    boost::optional<external_type> get_value(const internal_type& str)
+    {
+        std::stringstream ss(str);
+        std::array<double, 3> result;
+
+        for (double &d: result) {
+            if (!ss.good()) {
+                return boost::optional<external_type>(boost::none);
+            }
+
+            std::string substr;
+            std::getline(ss, substr, ',');
+            d = std::stod(substr);
+        }
+
+        return boost::optional<external_type>(result);
+    }
+/*
+    // Converts a Vec3 to string
+    boost::optional<internal_type> put_value(const external_type& vec)
+    {
+        std::stringstream ss("");
+
+        for (const double &d: vec) {
+            ss << d << ", ";
+        }
+
+        return boost::optional<internal_type>(ss);
+    }*/
+};
+
+joytracer::Scene load_scene(const std::string &filename) {
+    boost::property_tree::ptree pt;
+    std::vector<std::unique_ptr<joytracer::Surface>> surfaces;
+    std::array<double, 3> sky_color;
+    std::array<double, 3> sunlight_normal;
+
+    read_xml(filename, pt);
+
+    std::map<std::string, const std::function<void(const boost::property_tree::ptree::value_type &)>> node_handlers {
+        {"floor", [&surfaces](const boost::property_tree::ptree::value_type &node){
+            surfaces.push_back(std::make_unique<joytracer::Floor>());
+        }},
+        {"sphere", [&surfaces](const boost::property_tree::ptree::value_type &node){
+            double radius = node.second.get("radius", 0.0);
+            auto center = node.second.get("center", std::array{0.0, 0.0, 0.0}, Vec3Translator());
+            auto color = node.second.get("color", std::array{0.0, 0.0, 0.0}, Vec3Translator());
+            surfaces.push_back(std::make_unique<joytracer::Sphere>(
+                radius, center, color
+            ));
+        }},
+        {"sky-color", [&sky_color](const boost::property_tree::ptree::value_type &node){
+            sky_color = node.second.get_value(std::array{0.0, 0.0, 0.0}, Vec3Translator());
+        }},
+        {"sunlight-normal", [&sunlight_normal](const boost::property_tree::ptree::value_type &node){
+            sunlight_normal = node.second.get_value(std::array{0.0, 0.0, 0.0}, Vec3Translator());
+        }},
+        {"triangle", [&surfaces](const boost::property_tree::ptree::value_type &node){
+            std::array<double, 3> vertices;
+
+        }},
+    };
+
+    for (const auto &node: pt.get_child("scene")) {
+        auto handler = node_handlers.find(node.first);
+        if (handler != node_handlers.end()) handler->second(node);
+    }
+
+    return joytracer::Scene(surfaces, sky_color, sunlight_normal);
+}
+
+int main(int argc, char** argv) {
     const int screen_width = 640;
     const int screen_height = 480;
 
+    if (argc != 2) {
+        std::cerr << "No input scene specified!\n";
+        return 1;
+    }
+
+    joytracer::Scene test_scene = load_scene(argv[1]);
     sdl_wrapper::SDL sdl;
     sdl_wrapper::SDLWindow sdl_window("Joytracer", screen_width, screen_height);
     sdl_wrapper::SDLSurface main_surface = sdl_window.get_surface();
     sdl_wrapper::SDLSurface backbuffer(0, screen_width, screen_height, 32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
-    joytracer::Scene test_scene(
-        make_scene_surfaces(),
-        {0.0, 0.40, 0.80},
-        joytracer::normalize(std::array{1.0, 1.0, -1.0})
-    );
     joytracer::Camera fixed_camera{};
     fixed_camera.set_focal_distance(1.0);
     fixed_camera.set_plane_size(1.0, static_cast<double>(screen_height) / static_cast<double>(screen_width));
