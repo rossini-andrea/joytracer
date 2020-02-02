@@ -82,6 +82,7 @@ auto make_scene_surfaces() {
 // Custom translator for vec3
 class Vec3Translator
 {
+public:
     typedef std::string           internal_type;
     typedef std::array<double, 3> external_type;
 
@@ -144,8 +145,25 @@ joytracer::Scene load_scene(const std::string &filename) {
             sunlight_normal = node.second.get_value(std::array{0.0, 0.0, 0.0}, Vec3Translator());
         }},
         {"triangle", [&surfaces](const boost::property_tree::ptree::value_type &node){
-            std::array<double, 3> vertices;
+            std::array<std::array<double, 3>, 3> vertices;
+            std::array<double, 3> color;
+            auto vert_iterator = vertices.begin();
 
+            std::map<std::string, const std::function<void(const boost::property_tree::ptree::value_type &)>> node_handlers {
+                {"vert", [&vert_iterator](const boost::property_tree::ptree::value_type &node){
+                    *(vert_iterator++) = node.second.get_value(std::array{0.0, 0.0, 0.0}, Vec3Translator());
+                }},
+                {"color", [&color](const boost::property_tree::ptree::value_type &node){
+                    color = node.second.get_value(std::array{0.0, 0.0, 0.0}, Vec3Translator());
+                }},
+            };
+
+            for (const auto &node: node.second) {
+                auto handler = node_handlers.find(node.first);
+                if (handler != node_handlers.end()) handler->second(node);
+            }
+
+            surfaces.push_back(std::make_unique<joytracer::Triangle>(vertices, color));
         }},
     };
 
