@@ -10,83 +10,16 @@
 #include "joytracer.h"
 #include "sdl_wrapper.h"
 
-auto make_pyramid() {
-    std::vector<std::unique_ptr<joytracer::Surface>> v;
-
-    // South face
-    v.push_back(std::make_unique<joytracer::Triangle>(
-        std::array<std::array<double, 3>, 3>({
-            std::array<double, 3>{-1.0, 14.0, 0.0},
-            std::array<double, 3>{7.0, 14.0, 0.0},
-            std::array<double, 3>{3.0, 18.0, 5.0}
-        }),
-        std::array<double, 3>{0.8, 0.8, 0.4}
-    ));
-
-    // West face
-    v.push_back(std::make_unique<joytracer::Triangle>(
-        std::array<std::array<double, 3>, 3>({
-            std::array<double, 3>{-1.0, 22.0, 0.0},
-            std::array<double, 3>{-1.0, 14.0, 0.0},
-            std::array<double, 3>{3.0, 18.0, 5.0}
-        }),
-        std::array<double, 3>{0.8, 0.8, 0.4}
-    ));
-
-    // North face
-    v.push_back(std::make_unique<joytracer::Triangle>(
-        std::array<std::array<double, 3>, 3>({
-            std::array<double, 3>{7.0, 22.0, 0.0},
-            std::array<double, 3>{-1.0, 22.0, 0.0},
-            std::array<double, 3>{3.0, 18.0, 5.0}
-        }),
-        std::array<double, 3>{0.8, 0.8, 0.4}
-    ));
-
-    // East face
-    v.push_back(std::make_unique<joytracer::Triangle>(
-        std::array<std::array<double, 3>, 3>({
-            std::array<double, 3>{7.0, 14.0, 0.0},
-            std::array<double, 3>{7.0, 22.0, 0.0},
-            std::array<double, 3>{3.0, 18.0, 5.0}
-        }),
-        std::array<double, 3>{0.8, 0.8, 0.4}
-    ));
-
-    return v;
-}
-
-auto make_scene_surfaces() {
-    std::vector<std::unique_ptr<joytracer::Surface>> v;
-    v.push_back(std::make_unique<joytracer::Floor>());
-    v.push_back(std::make_unique<joytracer::Sphere>(
-        0.5, std::array<double, 3>{1.0, 3.0, 0.5},
-        std::array<double, 3>{0.0, 0.1, 1.0}
-    ));
-    v.push_back(std::make_unique<joytracer::Sphere>(
-        0.5, std::array<double, 3>{-1.0, 3.5, 0.5},
-        std::array<double, 3>{0.0, 0.8, 0.1}
-    ));
-    v.push_back(std::make_unique<joytracer::Sphere>(
-        1.0, std::array<double, 3>{0.0, 6.0, 1.0},
-        std::array<double, 3>{1.0, 1.0, 1.0}
-    ));
-
-    for (auto&& surface: make_pyramid()) {
-        v.push_back(std::move(surface));
-    }
-
-    return v;
-}
-
-// Custom translator for vec3
+/// Custom translator for vec3
 class Vec3Translator
 {
 public:
     typedef std::string           internal_type;
     typedef std::array<double, 3> external_type;
 
-    // Converts a string to vec3
+    /// Converts a string to vec3.
+    /// @str: The comma separated representation of a vec3.
+    /// \returns: a Vec3.
     boost::optional<external_type> get_value(const internal_type& str)
     {
         std::stringstream ss(str);
@@ -104,18 +37,6 @@ public:
 
         return boost::optional<external_type>(result);
     }
-/*
-    // Converts a Vec3 to string
-    boost::optional<internal_type> put_value(const external_type& vec)
-    {
-        std::stringstream ss("");
-
-        for (const double &d: vec) {
-            ss << d << ", ";
-        }
-
-        return boost::optional<internal_type>(ss);
-    }*/
 };
 
 joytracer::Scene load_scene(const std::string &filename) {
@@ -142,7 +63,7 @@ joytracer::Scene load_scene(const std::string &filename) {
             sky_color = node.second.get_value(std::array{0.0, 0.0, 0.0}, Vec3Translator());
         }},
         {"sunlight-normal", [&sunlight_normal](const boost::property_tree::ptree::value_type &node){
-            sunlight_normal = node.second.get_value(std::array{0.0, 0.0, 0.0}, Vec3Translator());
+            sunlight_normal = joytracer::normalize(node.second.get_value(std::array{0.0, 0.0, 0.0}, Vec3Translator()));
         }},
         {"triangle", [&surfaces](const boost::property_tree::ptree::value_type &node){
             std::array<std::array<double, 3>, 3> vertices;
@@ -172,7 +93,7 @@ joytracer::Scene load_scene(const std::string &filename) {
         if (handler != node_handlers.end()) handler->second(node);
     }
 
-    return joytracer::Scene(surfaces, sky_color, sunlight_normal);
+    return joytracer::Scene(std::move(surfaces), sky_color, sunlight_normal);
 }
 
 int main(int argc, char** argv) {
