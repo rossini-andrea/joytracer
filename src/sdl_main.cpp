@@ -8,89 +8,22 @@
 #include "joymath.h"
 #include "joytracer.h"
 #include "sdl_wrapper.h"
+#include "serialization.h"
 
-auto make_pyramid() {
-    std::vector<std::unique_ptr<joytracer::Surface>> v;
-
-    // South face
-    v.push_back(std::make_unique<joytracer::Triangle>(
-        std::array<std::array<double, 3>, 3>({
-            std::array<double, 3>{-1.0, 14.0, 0.0},
-            std::array<double, 3>{7.0, 14.0, 0.0},
-            std::array<double, 3>{3.0, 18.0, 5.0}
-        }),
-        std::array<double, 3>{0.8, 0.8, 0.4}
-    ));
-
-    // West face
-    v.push_back(std::make_unique<joytracer::Triangle>(
-        std::array<std::array<double, 3>, 3>({
-            std::array<double, 3>{-1.0, 22.0, 0.0},
-            std::array<double, 3>{-1.0, 14.0, 0.0},
-            std::array<double, 3>{3.0, 18.0, 5.0}
-        }),
-        std::array<double, 3>{0.8, 0.8, 0.4}
-    ));
-
-    // North face
-    v.push_back(std::make_unique<joytracer::Triangle>(
-        std::array<std::array<double, 3>, 3>({
-            std::array<double, 3>{7.0, 22.0, 0.0},
-            std::array<double, 3>{-1.0, 22.0, 0.0},
-            std::array<double, 3>{3.0, 18.0, 5.0}
-        }),
-        std::array<double, 3>{0.8, 0.8, 0.4}
-    ));
-
-    // East face
-    v.push_back(std::make_unique<joytracer::Triangle>(
-        std::array<std::array<double, 3>, 3>({
-            std::array<double, 3>{7.0, 14.0, 0.0},
-            std::array<double, 3>{7.0, 22.0, 0.0},
-            std::array<double, 3>{3.0, 18.0, 5.0}
-        }),
-        std::array<double, 3>{0.8, 0.8, 0.4}
-    ));
-
-    return v;
-}
-
-auto make_scene_surfaces() {
-    std::vector<std::unique_ptr<joytracer::Surface>> v;
-    v.push_back(std::make_unique<joytracer::Floor>());
-    v.push_back(std::make_unique<joytracer::Sphere>(
-        0.5, std::array<double, 3>{1.0, 3.0, 0.5},
-        std::array<double, 3>{0.0, 0.1, 1.0}
-    ));
-    v.push_back(std::make_unique<joytracer::Sphere>(
-        0.5, std::array<double, 3>{-1.0, 3.5, 0.5},
-        std::array<double, 3>{0.0, 0.8, 0.1}
-    ));
-    v.push_back(std::make_unique<joytracer::Sphere>(
-        1.0, std::array<double, 3>{0.0, 6.0, 1.0},
-        std::array<double, 3>{1.0, 1.0, 1.0}
-    ));
-
-    for (auto&& surface: make_pyramid()) {
-        v.push_back(std::move(surface));
-    }
-
-    return v;
-}
-
-int main() {
+int main(int argc, char** argv) {
     const int screen_width = 640;
     const int screen_height = 480;
 
+    if (argc != 2) {
+        std::cerr << "No input scene specified!\n";
+        return 1;
+    }
+
+    joytracer::Scene test_scene = joytracer::load_scene(argv[1]);
     sdl_wrapper::SDL sdl;
     sdl_wrapper::SDLWindow sdl_window("Joytracer", screen_width, screen_height);
     sdl_wrapper::SDLSurface main_surface = sdl_window.get_surface();
     sdl_wrapper::SDLSurface backbuffer(0, screen_width, screen_height, 32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
-    joytracer::Scene test_scene(
-        make_scene_surfaces(),
-        {0.0, 0.40, 0.80},
-        joytracer::normalize(std::array{1.0, 1.0, -1.0})
-    );
     joytracer::Camera fixed_camera{};
     fixed_camera.set_focal_distance(1.0);
     fixed_camera.set_plane_size(1.0, static_cast<double>(screen_height) / static_cast<double>(screen_width));

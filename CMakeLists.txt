@@ -14,10 +14,15 @@ else()
     set(DO_CLANG_TIDY "${CLANG_TIDY_EXE}" "-checks=*,-clang-analyzer-alpha.*")
 endif()
 
+find_package(Boost 1.72.0 REQUIRED)
+find_package(SDL2 REQUIRED)
+
+include_directories(${Boost_INCLUDE_DIRS})
 add_executable(joytracer
     "src/joytracer.cpp"
     "src/sdl_main.cpp"
-    "src/sdl_wrapper.cpp")
+    "src/sdl_wrapper.cpp"
+    "src/serialization.cpp")
 target_link_libraries(joytracer SDL2)
 
 if(CLANG_TIDY_EXE)

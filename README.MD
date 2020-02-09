@@ -11,6 +11,7 @@ This is what I am using:
 * gcc and clang alternately.
 * cmake 3.6
 * SDL 2 library
+* Boost 1.72
 
 ## Building
 
@@ -23,7 +24,7 @@ mkdir build
 cd build
 cmake ..
 make
-./joytracer
+./joytracer ../scenes/test_scene.xml
 ```
 
 Enjoy!
