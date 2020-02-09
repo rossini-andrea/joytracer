@@ -4,97 +4,11 @@
 #include <stdexcept>
 #include <string>
 #include <mutex>
-#include <boost/property_tree/xml_parser.hpp>
 
 #include "joymath.h"
 #include "joytracer.h"
 #include "sdl_wrapper.h"
-
-/// Custom translator for vec3
-class Vec3Translator
-{
-public:
-    typedef std::string           internal_type;
-    typedef std::array<double, 3> external_type;
-
-    /// Converts a string to vec3.
-    /// @str: The comma separated representation of a vec3.
-    /// \returns: a Vec3.
-    boost::optional<external_type> get_value(const internal_type& str)
-    {
-        std::stringstream ss(str);
-        std::array<double, 3> result;
-
-        for (double &d: result) {
-            if (!ss.good()) {
-                return boost::optional<external_type>(boost::none);
-            }
-
-            std::string substr;
-            std::getline(ss, substr, ',');
-            d = std::stod(substr);
-        }
-
-        return boost::optional<external_type>(result);
-    }
-};
-
-joytracer::Scene load_scene(const std::string &filename) {
-    boost::property_tree::ptree pt;
-    std::vector<std::unique_ptr<joytracer::Surface>> surfaces;
-    std::array<double, 3> sky_color;
-    std::array<double, 3> sunlight_normal;
-
-    read_xml(filename, pt);
-
-    std::map<std::string, const std::function<void(const boost::property_tree::ptree::value_type &)>> node_handlers {
-        {"floor", [&surfaces](const boost::property_tree::ptree::value_type &node){
-            surfaces.push_back(std::make_unique<joytracer::Floor>());
-        }},
-        {"sphere", [&surfaces](const boost::property_tree::ptree::value_type &node){
-            double radius = node.second.get("radius", 0.0);
-            auto center = node.second.get("center", std::array{0.0, 0.0, 0.0}, Vec3Translator());
-            auto color = node.second.get("color", std::array{0.0, 0.0, 0.0}, Vec3Translator());
-            surfaces.push_back(std::make_unique<joytracer::Sphere>(
-                radius, center, color
-            ));
-        }},
-        {"sky-color", [&sky_color](const boost::property_tree::ptree::value_type &node){
-            sky_color = node.second.get_value(std::array{0.0, 0.0, 0.0}, Vec3Translator());
-        }},
-        {"sunlight-normal", [&sunlight_normal](const boost::property_tree::ptree::value_type &node){
-            sunlight_normal = joytracer::normalize(node.second.get_value(std::array{0.0, 0.0, 0.0}, Vec3Translator()));
-        }},
-        {"triangle", [&surfaces](const boost::property_tree::ptree::value_type &node){
-            std::array<std::array<double, 3>, 3> vertices;
-            std::array<double, 3> color;
-            auto vert_iterator = vertices.begin();
-
-            std::map<std::string, const std::function<void(const boost::property_tree::ptree::value_type &)>> node_handlers {
-                {"vert", [&vert_iterator](const boost::property_tree::ptree::value_type &node){
-                    *(vert_iterator++) = node.second.get_value(std::array{0.0, 0.0, 0.0}, Vec3Translator());
-                }},
-                {"color", [&color](const boost::property_tree::ptree::value_type &node){
-                    color = node.second.get_value(std::array{0.0, 0.0, 0.0}, Vec3Translator());
-                }},
-            };
-
-            for (const auto &node: node.second) {
-                auto handler = node_handlers.find(node.first);
-                if (handler != node_handlers.end()) handler->second(node);
-            }
-
-            surfaces.push_back(std::make_unique<joytracer::Triangle>(vertices, color));
-        }},
-    };
-
-    for (const auto &node: pt.get_child("scene")) {
-        auto handler = node_handlers.find(node.first);
-        if (handler != node_handlers.end()) handler->second(node);
-    }
-
-    return joytracer::Scene(std::move(surfaces), sky_color, sunlight_normal);
-}
+#include "serialization.h"
 
 int main(int argc, char** argv) {
     const int screen_width = 640;
@@ -105,7 +19,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    joytracer::Scene test_scene = load_scene(argv[1]);
+    joytracer::Scene test_scene = joytracer::load_scene(argv[1]);
     sdl_wrapper::SDL sdl;
     sdl_wrapper::SDLWindow sdl_window("Joytracer", screen_width, screen_height);
     sdl_wrapper::SDLSurface main_surface = sdl_window.get_surface();
