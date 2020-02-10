@@ -6,34 +6,9 @@
 #include "joytracer.h"
 
 namespace joytracer {
-    class RandomHammersleyPoint {
-        private:
-            std::vector<std::array<double, 3>> m_points;
-            std::random_device m_random_device;
-            std::mt19937 m_random_engine;
-            std::uniform_int_distribution<int> m_random_distribution;
-        public:
-            RandomHammersleyPoint(int max_points) :
-                m_points(max_points),
-                m_random_device(),
-                m_random_engine(m_random_device()),
-                m_random_distribution(0, max_points - 1) {
-                std::vector<int> range(max_points);
-                std::iota(range.begin(), range.end(), 0);
-                std::transform(range.begin(), range.end(), m_points.begin(), [&](auto &i) -> auto{
-                    auto uv = hammersley::hammersley2d(i, max_points);
-                    return hammersley::hemispheresample_uniform(uv[0], uv[1]);
-                });
-            }
-
-            std::array<double, 3> operator()() {
-                return m_points.at(m_random_distribution(m_random_engine));
-            }
-    };
-
     std::optional<HitPoint> project_ray_on_plane_frontface(
         const Ray &ray,
-        const std::array<double, 3> &plane_origin,
+        const vec3 &plane_origin,
         const std::array<double, 3> &plane_normal) {
         // Calculate if it may hit
         auto denom = dot(ray.get_normal(), plane_normal);
@@ -55,7 +30,7 @@ namespace joytracer {
     }
 
     Triangle::Triangle(
-            const std::array<std::array<double, 3>, 3> &vertices,
+            const std::array<vec3, 3> &vertices,
             const std::array<double, 3> &color
         ) : m_vertices(vertices), m_color(color),
             m_normal(normalize(cross(
@@ -168,11 +143,10 @@ namespace joytracer {
         ), reflect - 1));
     }
 
-    RandomHammersleyPoint random_hemisphere_point(1000);
-    std::vector<std::array<double, 3>> hemisphere_points = ([]() -> auto {
+    std::vector<vec3> hemisphere_points = ([]() -> auto {
         const uint32_t point_count = 100;
         std::vector<uint32_t> range(point_count);
-        std::vector<std::array<double, 3>> points(point_count);
+        std::vector<vec3> points(point_count);
         std:iota(range.begin(), range.end(), 0);
         std::transform(range.begin(), range.end(), points.begin(), [=](uint32_t i){
             auto uv = hammersley::hammersley2d(i, point_count);
