@@ -9,16 +9,6 @@
 */
 namespace joytracer {
     /*
-    * Non normalized vector.
-    */
-    typedef std::array<double, 3> Vec3;
-
-    /*
-    * A normalized vector.
-    */
-    typedef std::array<double, 3> Normal3;
-
-    /*
     * A ray cast out into the scene.
     */
     class Ray {
