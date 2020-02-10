@@ -11,26 +11,31 @@ namespace joytracer {
     /*
     * Non normalized vector.
     */
-    typedef std::array<double, 3> vec3;
+    typedef std::array<double, 3> Vec3;
+
+    /*
+    * A normalized vector.
+    */
+    typedef std::array<double, 3> Normal3;
 
     /*
     * A ray cast out into the scene.
     */
     class Ray {
     private:
-        vec3 m_origin;
-        std::array<double, 3> m_normal;
+        Vec3 m_origin;
+        Normal3 m_normal;
     public:
-        Ray(const vec3 &origin,
-        const std::array<double, 3> &normal) :
+        Ray(const Vec3 &origin,
+        const Normal3 &normal) :
         m_origin(origin),
         m_normal(normal) {}
 
-        const vec3 &get_origin() const {
+        const Vec3 &get_origin() const {
             return m_origin;
         }
 
-        const std::array<double, 3> &get_normal() const {
+        const Normal3 &get_normal() const {
             return m_normal;
         }
     };
@@ -41,18 +46,18 @@ namespace joytracer {
     class HitPoint {
     private:
         double m_distance;
-        vec3 m_point;
+        Vec3 m_point;
     public:
         HitPoint(
             double distance,
-            const vec3 &point
+            const Vec3 &point
         ) : m_distance(distance), m_point(point) {}
 
         double distance() const {
             return m_distance;
         }
 
-        const vec3 &point() const {
+        const Vec3 &point() const {
             return m_point;
         }
     };
@@ -63,14 +68,14 @@ namespace joytracer {
     class HitResult {
     private:
         double m_distance;
-        vec3 m_point;
-        std::array<double, 3> m_normal;
+        Vec3 m_point;
+        Normal3 m_normal;
         std::array<double, 3> m_color;
     public:
         HitResult(
             double distance,
-            vec3 &point,
-            const std::array<double, 3> &normal,
+            const Vec3 &point,
+            const Normal3 &normal,
             const std::array<double, 3> &color
         ) : m_distance(distance), m_point(point), m_normal(normal), m_color(color) {}
 
@@ -78,11 +83,11 @@ namespace joytracer {
             return m_distance;
         }
 
-        const vec3 &point() const {
+        const Vec3 &point() const {
             return m_point;
         }
 
-        const std::array<double, 3> &normal() const {
+        const Normal3 &normal() const {
             return m_normal;
         }
 
@@ -105,12 +110,12 @@ namespace joytracer {
     */
     class Triangle : public Surface {
     private:
-        std::array<vec3, 3> m_vertices;
+        std::array<Vec3, 3> m_vertices;
         std::array<double, 3> m_color;
-        std::array<double, 3> m_normal;
+        Normal3 m_normal;
     public:
         Triangle(
-            const std::array<vec3, 3> &vertices,
+            const std::array<Vec3, 3> &vertices,
             const std::array<double, 3> &color
         );
         std::optional<HitResult> hit_test(const Ray &ray) const override;
@@ -132,10 +137,10 @@ namespace joytracer {
     class Sphere : public Surface {
     private:
         double m_radius;
-        vec3 m_center;
+        Vec3 m_center;
         std::array<double, 3> m_color;
     public:
-        Sphere(double radius, vec3 center, std::array<double, 3> color) :
+        Sphere(double radius, Vec3 center, std::array<double, 3> color) :
             m_radius(radius),
             m_center(center),
             m_color(color)
@@ -151,7 +156,7 @@ namespace joytracer {
     private:
         std::vector<std::unique_ptr<Surface>> m_surfaces;
         std::array<double, 3> m_sky_color;
-        std::array<double, 3> m_sunlight_normal;
+        Normal3 m_sunlight_normal;
 
         std::optional<HitResult> trace_single_ray(const Ray &ray) const;
         std::array<double, 3> trace_and_bounce_ray(const Ray &ray, int reflect) const;
@@ -159,7 +164,7 @@ namespace joytracer {
         Scene(
             std::vector<std::unique_ptr<Surface>> surfaces,
             const std::array<double, 3> &sky_color,
-            const std::array<double, 3> &sunlight_normal
+            const Normal3 &sunlight_normal
         ) : m_surfaces(std::move(surfaces)),
         m_sky_color(sky_color),
         m_sunlight_normal(sunlight_normal) {}
@@ -172,13 +177,13 @@ namespace joytracer {
     */
     class Camera {
     private:
-        vec3 m_position;
+        Vec3 m_position;
         std::array<double, 3> m_orientation;
         std::array<std::array<double, 3>, 3> m_view_transform;
         double m_focal_distance;
         double m_plane_width, m_plane_height;
     public:
-        void set_position(const std::array<double, 3> &position) {
+        void set_position(const Vec3 &position) {
             m_position = position;
         }
 

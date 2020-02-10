@@ -8,7 +8,7 @@
 namespace joytracer {
     std::optional<HitPoint> project_ray_on_plane_frontface(
         const Ray &ray,
-        const vec3 &plane_origin,
+        const Vec3 &plane_origin,
         const std::array<double, 3> &plane_normal) {
         // Calculate if it may hit
         auto denom = dot(ray.get_normal(), plane_normal);
@@ -30,7 +30,7 @@ namespace joytracer {
     }
 
     Triangle::Triangle(
-            const std::array<vec3, 3> &vertices,
+            const std::array<Vec3, 3> &vertices,
             const std::array<double, 3> &color
         ) : m_vertices(vertices), m_color(color),
             m_normal(normalize(cross(
@@ -143,10 +143,10 @@ namespace joytracer {
         ), reflect - 1));
     }
 
-    std::vector<vec3> hemisphere_points = ([]() -> auto {
+    std::vector<Vec3> hemisphere_points = ([]() -> auto {
         const uint32_t point_count = 100;
         std::vector<uint32_t> range(point_count);
-        std::vector<vec3> points(point_count);
+        std::vector<Vec3> points(point_count);
         std:iota(range.begin(), range.end(), 0);
         std::transform(range.begin(), range.end(), points.begin(), [=](uint32_t i){
             auto uv = hammersley::hammersley2d(i, point_count);
