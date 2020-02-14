@@ -4,6 +4,8 @@
 #include <optional>
 #include <memory>
 
+#include "joymath.h"
+
 /*
 * Main namespace for the app.
 */

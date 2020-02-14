@@ -2,7 +2,6 @@
 #include <random>
 
 #include "hammersley.h"
-#include "joymath.h"
 #include "joytracer.h"
 
 namespace joytracer {
@@ -60,7 +59,7 @@ namespace joytracer {
     }
 
     std::optional<HitResult> Floor::hit_test(const Ray &ray) const {
-        auto projection = project_ray_on_plane_frontface(ray, Vec3({0.0, 0.0, 0.0}), Vec3({0.0, 0.0, 1.0}));
+        auto projection = project_ray_on_plane_frontface(ray, Vec3({0.0, 0.0, 0.0}), Normal3(Vec3({0.0, 0.0, 1.0})));
 
         if (!projection) {
             return std::nullopt;
@@ -78,7 +77,7 @@ namespace joytracer {
 
     std::optional<HitResult> Sphere::hit_test(const Ray &ray) const {
         auto origin_to_center = ray.get_origin() - m_center;
-        auto origin_to_center_length = vector_length(origin_to_center);
+        auto origin_to_center_length = origin_to_center.vector_length();
         auto projection = dot(ray.get_normal(), origin_to_center);
         auto square = projection * projection -
         origin_to_center_length * origin_to_center_length +
@@ -102,7 +101,7 @@ namespace joytracer {
         return HitResult(
             distance,
             hit_point,
-            normalize(hit_point - m_center),
+            Normal3(hit_point - m_center),
             m_color);
     }
 
@@ -151,7 +150,7 @@ namespace joytracer {
         std:iota(range.begin(), range.end(), 0);
         std::transform(range.begin(), range.end(), points.begin(), [=](uint32_t i){
             auto uv = hammersley::hammersley2d(i, point_count);
-            return hammersley::hemispheresample_uniform(uv[0], uv[1]);
+            return Vec3(hammersley::hemispheresample_uniform(uv[0], uv[1]));
         });
         return points;
     })();
@@ -192,7 +191,7 @@ namespace joytracer {
             [&](const auto &accum, const auto &hemisphere_point) -> auto {
                 return accum + trace_and_bounce_ray(Ray(
                     nearest_hit->point(),
-                    dot(hemisphere_point, orthonormal_matrix)
+                    Normal3(dot(hemisphere_point, orthonormal_matrix))
                 ), 1);
         }) / static_cast<double>(hemisphere_points.size());
 
