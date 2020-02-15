@@ -201,4 +201,53 @@ namespace joytracer {
             third_normal.get_value()
         };
     }
+
+    /*
+    * Type for a color.
+    */
+    class Color {
+    private:
+        std::array<double, 3> m_value;
+        constexpr Color(const std::array<double, 3> &rgb) :
+            m_value(rgb) {}
+    public:
+        constexpr Color(): m_value() {}
+        std::array<double, 3> to_rgb() { return m_value; }
+
+        static constexpr Color from_rgb(const std::array<double, 3> &rgb) {
+            return Color(rgb);
+        }
+
+        static constexpr Color black() { return Color(std::array{0.0, 0.0, 0.0}); }
+        static constexpr Color white() { return Color(std::array{1.0, 1.0, 1.0}); }
+
+        static Color blend(
+            const std::vector<Color> &colors
+        );
+        static constexpr Color weighted_blend(
+            const Color &first_color, const Color &second_color,
+            const double first_weight, const double second_weight
+        );
+        static constexpr Color substractive_mix(
+            const Color &first_color, const Color &second_color
+        );
+    };
+
+    constexpr Color Color::weighted_blend(
+        const Color &first_color, const Color &second_color,
+        const double first_weight, const double second_weight
+    ) {
+        return from_rgb((
+            first_color.m_value * first_weight +
+            second_color.m_value * second_weight
+        ) / (first_weight + second_weight));
+    }
+
+    constexpr Color Color::substractive_mix(
+        const Color &first_color, const Color &second_color
+    ) {
+        return from_rgb(
+            first_color.m_value * second_color.m_value
+        );
+    }
 }

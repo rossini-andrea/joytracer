@@ -5,6 +5,18 @@
 #include "joytracer.h"
 
 namespace joytracer {
+    Color Color::blend(
+        const std::vector<Color> &colors
+    ) {
+        return from_rgb(std::accumulate(
+            colors.begin(), colors.end(),
+            std::array{0.0, 0.0, 0.0},
+            [&](const auto &accum, const auto &c) constexpr -> auto {
+                return accum + c.m_value;
+            }
+        ) / static_cast<double>(colors.size()));
+    }
+
     std::optional<HitPoint> project_ray_on_plane_frontface(
         const Ray &ray,
         const Vec3 &plane_origin,
@@ -30,7 +42,7 @@ namespace joytracer {
 
     Triangle::Triangle(
             const std::array<Vec3, 3> &vertices,
-            const std::array<double, 3> &color
+            const Color &color
         ) : m_vertices(vertices), m_color(color),
             m_normal(cross(
                 vertices[1] - vertices[0],
@@ -71,8 +83,8 @@ namespace joytracer {
         return HitResult(projection->distance(), hit_point,
             Normal3(std::array{0.0, 0.0, 1.0}),
             (is_x_odd == is_y_odd) ?
-            std::array<double, 3>{1.0, 1.0, 1.0} :
-            std::array<double, 3>{0.0, 0.0, 0.0});
+            Color::white() :
+            Color::black());
     }
 
     std::optional<HitResult> Sphere::hit_test(const Ray &ray) const {
@@ -123,9 +135,9 @@ namespace joytracer {
         return *nearest_hit;
     }
 
-    std::array<double, 3> Scene::trace_and_bounce_ray(const Ray &ray, int reflect) const {
+    Color Scene::trace_and_bounce_ray(const Ray &ray, int reflect) const {
         if (reflect == 0) {
-            return {0,0,0};
+            return Color::black();
         }
 
         auto nearest_hit = trace_single_ray(ray);
@@ -133,10 +145,13 @@ namespace joytracer {
         if (!nearest_hit) {
             auto sun_exposure = (1.0 - dot(ray.get_normal(), m_sunlight_normal)) / 2.0;
             sun_exposure = sun_exposure >= 0.999 ? 1.0 : sun_exposure / 2.0;
-            return m_sky_color * (1.0 - sun_exposure) + std::array{1.0, 1.0, 1.0} * sun_exposure;
+            return Color::weighted_blend(m_sky_color, Color::white(), 1.0 - sun_exposure, sun_exposure);
         }
 
-        return (nearest_hit->color() * trace_ray(Ray(
+        // Oh my God, someone fix this unnecessary mutual recursion!
+        // Also here applyes reflection by substractive color mixing,
+        // while on the other function it uses additive.
+        return Color::substractive_mix(nearest_hit->color(), trace_ray(Ray(
             nearest_hit->point(),
             Normal3(ray.get_normal() + nearest_hit->normal() *
                 (std::fabs(dot(ray.get_normal(), nearest_hit->normal())) * 2))
@@ -155,9 +170,9 @@ namespace joytracer {
         return points;
     })();
 
-    std::array<double, 3> Scene::trace_ray(const Ray &ray, int reflect) const {
+    Color Scene::trace_ray(const Ray &ray, int reflect) const {
         if (reflect == 0) {
-            return {0,0,0};
+            return Color::black();
         }
 
         auto nearest_hit = trace_single_ray(ray);
@@ -165,7 +180,7 @@ namespace joytracer {
         if (!nearest_hit) {
             auto sun_exposure = (1.0 - dot(ray.get_normal(), m_sunlight_normal)) / 2.0;
             sun_exposure = sun_exposure >= 0.999 ? 1.0 : sun_exposure / 2.0;
-            return m_sky_color * (1.0 - sun_exposure) + std::array{1.0, 1.0, 1.0} * sun_exposure;
+            return Color::weighted_blend(m_sky_color, Color::white(), 1.0 - sun_exposure, sun_exposure);
         }
 
         auto base_color = nearest_hit->color();
@@ -180,22 +195,31 @@ namespace joytracer {
         ));
 
         if (direct_light) {
-            return (base_color * 2.0 + reflection_color) / 3.0;
+            // TODO: Note for future me: base_color is paint, while reflection is light,
+            // this should be implemented by substractive color mixing.
+            return Color::weighted_blend(base_color, reflection_color, 2.0, 1.0);
         }
 
         auto orthonormal_matrix = normal_to_orthonormal_matrix(
             nearest_hit->normal(), nearest_hit->normal().to_orthogonal()
         );
+        // WTF?
         std::rotate(orthonormal_matrix.begin(), orthonormal_matrix.begin() + 1, orthonormal_matrix.end());
-        auto diffuse_light = std::accumulate(hemisphere_points.begin(), hemisphere_points.end(), std::array{0.0, 0.0, 0.0},
-            [&](const auto &accum, const auto &hemisphere_point) -> auto {
-                return accum + trace_and_bounce_ray(Ray(
+        std::vector<Color> diffuse_light_rays(hemisphere_points.size());std::transform(
+            hemisphere_points.begin(),
+            hemisphere_points.end(),
+            diffuse_light_rays.begin(),
+            [&](const auto &hemisphere_point) -> auto {
+                return trace_and_bounce_ray(Ray(
                     nearest_hit->point(),
                     Normal3(dot(hemisphere_point, orthonormal_matrix))
                 ), 1);
-        }) / static_cast<double>(hemisphere_points.size());
-
-        return ((base_color * diffuse_light) * 2.0 + reflection_color) / 3.0;
+        });
+        auto diffuse_light = Color::blend(diffuse_light_rays);
+        // TODO: Note for future me: base_color is paint, while diffuse_light
+        // **and** reflection are light, lights should be added, and then applied
+        // to the object by substractive color mixing.
+        return Color::weighted_blend(Color::substractive_mix(base_color, diffuse_light), reflection_color, 2.0, 1.0);
     }
 
     void Camera::set_orientation(const std::array<double, 3> &orientation) {
@@ -216,8 +240,8 @@ namespace joytracer {
         m_orientation = orientation;
     }
 
-    std::vector<std::array<double, 3>> Camera::render_scene(const Scene &scene, int width, int height) {
-        std::vector<std::array<double, 3>> frame(width * height);
+    std::vector<Color> Camera::render_scene(const Scene &scene, int width, int height) {
+        std::vector<Color> frame(width * height);
 
         for (int y = 0; y < height; ++y) {
             double surface_y = m_plane_height * (0.5 - static_cast<double>(y) / height);
@@ -234,7 +258,7 @@ namespace joytracer {
         return frame;
     }
 
-    std::array<double, 3> Camera::test_point(const Scene &scene, int width, int height, int x, int y) {
+    Color Camera::test_point(const Scene &scene, int width, int height, int x, int y) {
         double surface_y = m_plane_height * (0.5 - static_cast<double>(y) / height);
         double surface_x = m_plane_width * (static_cast<double>(x) / width - 0.5);
         return scene.trace_ray(Ray(

@@ -62,13 +62,13 @@ namespace joytracer {
         double m_distance;
         Vec3 m_point;
         Normal3 m_normal;
-        std::array<double, 3> m_color;
+        Color m_color;
     public:
         HitResult(
             double distance,
             const Vec3 &point,
             const Normal3 &normal,
-            const std::array<double, 3> &color
+            const Color &color
         ) : m_distance(distance), m_point(point), m_normal(normal), m_color(color) {}
 
         double distance() const {
@@ -83,7 +83,7 @@ namespace joytracer {
             return m_normal;
         }
 
-        const std::array<double, 3> &color() const {
+        const Color &color() const {
             return m_color;
         }
     };
@@ -103,12 +103,12 @@ namespace joytracer {
     class Triangle : public Surface {
     private:
         std::array<Vec3, 3> m_vertices;
-        std::array<double, 3> m_color;
+        Color m_color;
         Normal3 m_normal;
     public:
         Triangle(
             const std::array<Vec3, 3> &vertices,
-            const std::array<double, 3> &color
+            const Color &color
         );
         std::optional<HitResult> hit_test(const Ray &ray) const override;
     };
@@ -130,9 +130,9 @@ namespace joytracer {
     private:
         double m_radius;
         Vec3 m_center;
-        std::array<double, 3> m_color;
+        Color m_color;
     public:
-        Sphere(double radius, Vec3 center, std::array<double, 3> color) :
+        Sphere(double radius, Vec3 center, Color color) :
             m_radius(radius),
             m_center(center),
             m_color(color)
@@ -147,20 +147,20 @@ namespace joytracer {
     class Scene {
     private:
         std::vector<std::unique_ptr<Surface>> m_surfaces;
-        std::array<double, 3> m_sky_color;
+        Color m_sky_color;
         Normal3 m_sunlight_normal;
 
         std::optional<HitResult> trace_single_ray(const Ray &ray) const;
-        std::array<double, 3> trace_and_bounce_ray(const Ray &ray, int reflect) const;
+        Color trace_and_bounce_ray(const Ray &ray, int reflect) const;
     public:
         Scene(
             std::vector<std::unique_ptr<Surface>> surfaces,
-            const std::array<double, 3> &sky_color,
+            const Color &sky_color,
             const Normal3 &sunlight_normal
         ) : m_surfaces(std::move(surfaces)),
         m_sky_color(sky_color),
         m_sunlight_normal(sunlight_normal) {}
-        std::array<double, 3> trace_ray(const Ray &ray, int reflect) const;
+        Color trace_ray(const Ray &ray, int reflect) const;
     };
 
     /*
@@ -190,7 +190,7 @@ namespace joytracer {
             m_plane_width = width; m_plane_height = height;
         }
 
-        std::vector<std::array<double, 3>> render_scene(const Scene &scene, int width, int height);
-        std::array<double, 3> test_point(const Scene &scene, int width, int height, int x, int y);
+        std::vector<Color> render_scene(const Scene &scene, int width, int height);
+        Color test_point(const Scene &scene, int width, int height, int x, int y);
     };
 }
