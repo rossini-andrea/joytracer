@@ -2,39 +2,25 @@
 #include <random>
 
 #include "hammersley.h"
-#include "joymath.h"
 #include "joytracer.h"
 
 namespace joytracer {
-    class RandomHammersleyPoint {
-        private:
-            std::vector<std::array<double, 3>> m_points;
-            std::random_device m_random_device;
-            std::mt19937 m_random_engine;
-            std::uniform_int_distribution<int> m_random_distribution;
-        public:
-            RandomHammersleyPoint(int max_points) :
-                m_points(max_points),
-                m_random_device(),
-                m_random_engine(m_random_device()),
-                m_random_distribution(0, max_points - 1) {
-                std::vector<int> range(max_points);
-                std::iota(range.begin(), range.end(), 0);
-                std::transform(range.begin(), range.end(), m_points.begin(), [&](auto &i) -> auto{
-                    auto uv = hammersley::hammersley2d(i, max_points);
-                    return hammersley::hemispheresample_uniform(uv[0], uv[1]);
-                });
+    Color Color::blend(
+        const std::vector<Color> &colors
+    ) {
+        return from_rgb(std::accumulate(
+            colors.begin(), colors.end(),
+            std::array{0.0, 0.0, 0.0},
+            [&](const auto &accum, const auto &c) constexpr -> auto {
+                return accum + c.m_value;
             }
-
-            std::array<double, 3> operator()() {
-                return m_points.at(m_random_distribution(m_random_engine));
-            }
-    };
+        ) / static_cast<double>(colors.size()));
+    }
 
     std::optional<HitPoint> project_ray_on_plane_frontface(
         const Ray &ray,
-        const std::array<double, 3> &plane_origin,
-        const std::array<double, 3> &plane_normal) {
+        const Vec3 &plane_origin,
+        const Normal3 &plane_normal) {
         // Calculate if it may hit
         auto denom = dot(ray.get_normal(), plane_normal);
 
@@ -55,13 +41,13 @@ namespace joytracer {
     }
 
     Triangle::Triangle(
-            const std::array<std::array<double, 3>, 3> &vertices,
-            const std::array<double, 3> &color
+            const std::array<Vec3, 3> &vertices,
+            const Color &color
         ) : m_vertices(vertices), m_color(color),
-            m_normal(normalize(cross(
+            m_normal(cross(
                 vertices[1] - vertices[0],
                 vertices[2] - vertices[1]
-            ))) {
+            )) {
     }
 
     std::optional<HitResult> Triangle::hit_test(const Ray &ray) const {
@@ -85,7 +71,7 @@ namespace joytracer {
     }
 
     std::optional<HitResult> Floor::hit_test(const Ray &ray) const {
-        auto projection = project_ray_on_plane_frontface(ray, {0.0, 0.0, 0.0}, {0.0, 0.0, 1.0});
+        auto projection = project_ray_on_plane_frontface(ray, Vec3({0.0, 0.0, 0.0}), Normal3(Vec3({0.0, 0.0, 1.0})));
 
         if (!projection) {
             return std::nullopt;
@@ -95,15 +81,15 @@ namespace joytracer {
         long is_x_odd = static_cast<long>(floorf(hit_point[0])) & 1;
         long is_y_odd = static_cast<long>(floorf(hit_point[1])) & 1;
         return HitResult(projection->distance(), hit_point,
-            {0.0, 0.0, 1.0},
+            Normal3(std::array{0.0, 0.0, 1.0}),
             (is_x_odd == is_y_odd) ?
-            std::array<double, 3>{1.0, 1.0, 1.0} :
-            std::array<double, 3>{0.0, 0.0, 0.0});
+            Color::white() :
+            Color::black());
     }
 
     std::optional<HitResult> Sphere::hit_test(const Ray &ray) const {
         auto origin_to_center = ray.get_origin() - m_center;
-        auto origin_to_center_length = vector_length(origin_to_center);
+        auto origin_to_center_length = origin_to_center.vector_length();
         auto projection = dot(ray.get_normal(), origin_to_center);
         auto square = projection * projection -
         origin_to_center_length * origin_to_center_length +
@@ -127,7 +113,7 @@ namespace joytracer {
         return HitResult(
             distance,
             hit_point,
-            normalize(hit_point - m_center),
+            Normal3(hit_point - m_center),
             m_color);
     }
 
@@ -149,9 +135,9 @@ namespace joytracer {
         return *nearest_hit;
     }
 
-    std::array<double, 3> Scene::trace_and_bounce_ray(const Ray &ray, int reflect) const {
+    Color Scene::trace_and_bounce_ray(const Ray &ray, int reflect) const {
         if (reflect == 0) {
-            return {0,0,0};
+            return Color::black();
         }
 
         auto nearest_hit = trace_single_ray(ray);
@@ -159,31 +145,34 @@ namespace joytracer {
         if (!nearest_hit) {
             auto sun_exposure = (1.0 - dot(ray.get_normal(), m_sunlight_normal)) / 2.0;
             sun_exposure = sun_exposure >= 0.999 ? 1.0 : sun_exposure / 2.0;
-            return m_sky_color * (1.0 - sun_exposure) + std::array{1.0, 1.0, 1.0} * sun_exposure;
+            return Color::weighted_blend(m_sky_color, Color::white(), 1.0 - sun_exposure, sun_exposure);
         }
 
-        return (nearest_hit->color() * trace_ray(Ray(
+        // Oh my God, someone fix this unnecessary mutual recursion!
+        // Also here applyes reflection by substractive color mixing,
+        // while on the other function it uses additive.
+        return Color::substractive_mix(nearest_hit->color(), trace_ray(Ray(
             nearest_hit->point(),
-            ray.get_normal() + nearest_hit->normal() * (std::fabs(dot(ray.get_normal(), nearest_hit->normal())) * 2)
+            Normal3(ray.get_normal() + nearest_hit->normal() *
+                (std::fabs(dot(ray.get_normal(), nearest_hit->normal())) * 2))
         ), reflect - 1));
     }
 
-    RandomHammersleyPoint random_hemisphere_point(1000);
-    std::vector<std::array<double, 3>> hemisphere_points = ([]() -> auto {
+    std::vector<Vec3> hemisphere_points = ([]() -> auto {
         const uint32_t point_count = 100;
         std::vector<uint32_t> range(point_count);
-        std::vector<std::array<double, 3>> points(point_count);
+        std::vector<Vec3> points(point_count);
         std:iota(range.begin(), range.end(), 0);
         std::transform(range.begin(), range.end(), points.begin(), [=](uint32_t i){
             auto uv = hammersley::hammersley2d(i, point_count);
-            return hammersley::hemispheresample_uniform(uv[0], uv[1]);
+            return Vec3(hammersley::hemispheresample_uniform(uv[0], uv[1]));
         });
         return points;
     })();
 
-    std::array<double, 3> Scene::trace_ray(const Ray &ray, int reflect) const {
+    Color Scene::trace_ray(const Ray &ray, int reflect) const {
         if (reflect == 0) {
-            return {0,0,0};
+            return Color::black();
         }
 
         auto nearest_hit = trace_single_ray(ray);
@@ -191,49 +180,58 @@ namespace joytracer {
         if (!nearest_hit) {
             auto sun_exposure = (1.0 - dot(ray.get_normal(), m_sunlight_normal)) / 2.0;
             sun_exposure = sun_exposure >= 0.999 ? 1.0 : sun_exposure / 2.0;
-            return m_sky_color * (1.0 - sun_exposure) + std::array{1.0, 1.0, 1.0} * sun_exposure;
+            return Color::weighted_blend(m_sky_color, Color::white(), 1.0 - sun_exposure, sun_exposure);
         }
 
         auto base_color = nearest_hit->color();
         auto reflection_color = trace_and_bounce_ray(Ray(
             nearest_hit->point(),
-            ray.get_normal() + nearest_hit->normal() * (std::fabs(dot(ray.get_normal(), nearest_hit->normal())) * 2)
+            Normal3(ray.get_normal() + nearest_hit->normal() * (std::fabs(dot(ray.get_normal(), nearest_hit->normal())) * 2))
         ), reflect - 1);
 
         bool direct_light = !trace_single_ray(Ray(
             nearest_hit->point(),
-            m_sunlight_normal * -1.0
+            Normal3(m_sunlight_normal * -1.0)
         ));
 
         if (direct_light) {
-            return (base_color * 2.0 + reflection_color) / 3.0;
+            // TODO: Note for future me: base_color is paint, while reflection is light,
+            // this should be implemented by substractive color mixing.
+            return Color::weighted_blend(base_color, reflection_color, 2.0, 1.0);
         }
 
         auto orthonormal_matrix = normal_to_orthonormal_matrix(
-            nearest_hit->normal(), normal_to_orthogonal(nearest_hit->normal())
+            nearest_hit->normal(), nearest_hit->normal().to_orthogonal()
         );
+        // WTF?
         std::rotate(orthonormal_matrix.begin(), orthonormal_matrix.begin() + 1, orthonormal_matrix.end());
-        auto diffuse_light = std::accumulate(hemisphere_points.begin(), hemisphere_points.end(), std::array{0.0, 0.0, 0.0},
-            [&](const auto &accum, const auto &hemisphere_point) -> auto {
-                return accum + trace_and_bounce_ray(Ray(
+        std::vector<Color> diffuse_light_rays(hemisphere_points.size());std::transform(
+            hemisphere_points.begin(),
+            hemisphere_points.end(),
+            diffuse_light_rays.begin(),
+            [&](const auto &hemisphere_point) -> auto {
+                return trace_and_bounce_ray(Ray(
                     nearest_hit->point(),
-                    dot(hemisphere_point, orthonormal_matrix)
+                    Normal3(dot(hemisphere_point, orthonormal_matrix))
                 ), 1);
-        }) / static_cast<double>(hemisphere_points.size());
-
-        return ((base_color * diffuse_light) * 2.0 + reflection_color) / 3.0;
+        });
+        auto diffuse_light = Color::blend(diffuse_light_rays);
+        // TODO: Note for future me: base_color is paint, while diffuse_light
+        // **and** reflection are light, lights should be added, and then applied
+        // to the object by substractive color mixing.
+        return Color::weighted_blend(Color::substractive_mix(base_color, diffuse_light), reflection_color, 2.0, 1.0);
     }
 
     void Camera::set_orientation(const std::array<double, 3> &orientation) {
         double horizontal_length = std::cos(orientation[0]);
         double yaw_cos = std::cos(orientation[1]);
         double yaw_sin = std::sin(orientation[1]);
-        auto lookat = normalize<double, 3>({
+        Normal3 lookat(std::array{
             horizontal_length * yaw_cos,
             horizontal_length * yaw_sin,
             std::sin(orientation[0])
         });
-        auto left = normalize<double, 3>({
+        Normal3 left(std::array{
             -yaw_sin,
             yaw_cos,
             0.0
@@ -242,8 +240,8 @@ namespace joytracer {
         m_orientation = orientation;
     }
 
-    std::vector<std::array<double, 3>> Camera::render_scene(const Scene &scene, int width, int height) {
-        std::vector<std::array<double, 3>> frame(width * height);
+    std::vector<Color> Camera::render_scene(const Scene &scene, int width, int height) {
+        std::vector<Color> frame(width * height);
 
         for (int y = 0; y < height; ++y) {
             double surface_y = m_plane_height * (0.5 - static_cast<double>(y) / height);
@@ -252,7 +250,7 @@ namespace joytracer {
                 double surface_x = m_plane_width * (static_cast<double>(x) / width - 0.5);
                 frame[y * width + x] = scene.trace_ray(Ray(
                     m_position,
-                    dot(normalize(std::array{m_focal_distance, -surface_x, surface_y}), m_view_transform)
+                    dot(Normal3(std::array{m_focal_distance, -surface_x, surface_y}), m_view_transform)
                 ), 10);
             }
         }
@@ -260,12 +258,12 @@ namespace joytracer {
         return frame;
     }
 
-    std::array<double, 3> Camera::test_point(const Scene &scene, int width, int height, int x, int y) {
+    Color Camera::test_point(const Scene &scene, int width, int height, int x, int y) {
         double surface_y = m_plane_height * (0.5 - static_cast<double>(y) / height);
         double surface_x = m_plane_width * (static_cast<double>(x) / width - 0.5);
         return scene.trace_ray(Ray(
             m_position,
-            dot(normalize(std::array{m_focal_distance, -surface_x, surface_y}), m_view_transform)
+            dot(Normal3(std::array{m_focal_distance, -surface_x, surface_y}), m_view_transform)
         ), 10);
     }
 } // namespace joytracer

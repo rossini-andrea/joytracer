@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
     joytracer::Camera fixed_camera{};
     fixed_camera.set_focal_distance(1.0);
     fixed_camera.set_plane_size(1.0, static_cast<double>(screen_height) / static_cast<double>(screen_width));
-    fixed_camera.set_position({0.0, 0.0, 1.77});
+    fixed_camera.set_position(joytracer::Vec3({0.0, 0.0, 1.77}));
     fixed_camera.set_orientation({0.0, std::acos(-1) * 0.50, 0.0});
     auto fixed_frame = fixed_camera.render_scene(test_scene, screen_width, screen_height);
 
@@ -37,11 +37,11 @@ int main(int argc, char** argv) {
 
         for (int y = 0; y < screen_height; ++y) {
             for (int x = 0; x < screen_width; ++x) {
-                int i = y * screen_width + x;
+                auto colorvalue = fixed_frame[y * screen_width + x].to_rgb();
                 backbuffer.set_pixel(x, y, 0xff000000 |
-                    (static_cast<uint32_t>(255 * fixed_frame[i][0])) |
-                    (static_cast<uint32_t>(255 * fixed_frame[i][1])) << 8 |
-                    (static_cast<uint32_t>(255 * fixed_frame[i][2])) << 16);
+                    (static_cast<uint32_t>(255 * colorvalue[0])) |
+                    (static_cast<uint32_t>(255 * colorvalue[1])) << 8 |
+                    (static_cast<uint32_t>(255 * colorvalue[2])) << 16);
             }
         }
     }
@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
         },
         // onclick
         [&](int x, int y) -> void {
-            auto color = fixed_camera.test_point(test_scene, screen_width, screen_height, x, y);
+            auto color = fixed_camera.test_point(test_scene, screen_width, screen_height, x, y).to_rgb();
             std::cout
                 << "Color of (" << x << "," << y << "): "
                 << color[0] << ", " << color[1] << ", " << color[2] << ", " << '\n';

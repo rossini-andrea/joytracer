@@ -88,25 +88,6 @@ namespace joytracer {
         return result;
     }
 
-    constexpr std::array<double, 3> normal_to_orthogonal(const std::array<double, 3> normal) {
-        return std::array{
-            normal[1] - normal[2],
-            -normal[0] + normal[2],
-            normal[0] - normal[1]
-        };
-    }
-
-    constexpr std::array<std::array<double, 3>, 3> normal_to_orthonormal_matrix(
-        const std::array<double, 3> &first_normal,
-        const std::array<double, 3> &second_normal) {
-        auto third_normal = normalize(cross(first_normal, second_normal));
-        return std::array{
-            first_normal,
-            cross(third_normal, first_normal),
-            third_normal
-        };
-    }
-
     template<class T>
     constexpr std::array<T, 3> dot(const std::array<T, 3> &vec,
         const std::array<std::array<T, 3>, 3> &matrix) {
@@ -122,5 +103,151 @@ namespace joytracer {
         });
 
         return result;
+    }
+
+    /*
+    * Non normalized vector.
+    */
+    class Vec3 {
+    protected:
+        std::array<double, 3> m_value;
+    public:
+        constexpr Vec3(): m_value() {}
+
+        constexpr Vec3(const std::array<double, 3> &vector): m_value(vector) {
+
+        }
+
+        constexpr double operator[](size_t i) {
+            return m_value[i];
+        }
+
+        constexpr const std::array<double, 3>& get_value() const {
+            return m_value;
+        }
+
+        constexpr Vec3 operator+(const Vec3 &other) const {
+            return this->m_value + other.m_value;
+        }
+
+        constexpr Vec3 operator-(const Vec3 &other) const {
+            return this->m_value - other.m_value;
+        }
+
+        constexpr Vec3 operator*(double scalar) const {
+            return this->m_value * scalar;
+        }
+
+        constexpr Vec3 operator*(const Vec3 &other) const {
+            return this->m_value * other.m_value;
+        }
+
+        constexpr Vec3 operator/(double scalar) const {
+            return this->m_value / scalar;
+        }
+
+        constexpr auto vector_length() const {
+            return joytracer::vector_length(m_value);
+        }
+    };
+
+    /*
+    * A normalized vector.
+    */
+    class Normal3: public Vec3 {
+    public:
+        constexpr explicit Normal3(const Vec3 &vector):
+            Vec3(normalize(vector.get_value()))
+        {
+
+        }
+
+        constexpr Normal3 to_orthogonal() const {
+            return Normal3(
+                m_value[1] - m_value[2],
+                -m_value[0] + m_value[2],
+                m_value[0] - m_value[1]
+            );
+        }
+    private:
+        constexpr Normal3(double x, double y, double z): Vec3({x,y,z}) { }
+    };
+
+    constexpr double dot(const Vec3 &a, const Vec3 &b) {
+        return dot(a.get_value(), b.get_value());
+    }
+
+    constexpr Vec3 dot(const Vec3 &vec, const std::array<std::array<double, 3>, 3> &matrix) {
+        return dot(vec.get_value(), matrix);
+    }
+
+    constexpr Vec3 cross(const Vec3 &a, const Vec3 &b) {
+        return cross(a.get_value(), b.get_value());
+    }
+
+    // TODO: Fix this wrapper signature ASAP. I am no mathematician, but my OOP sense
+    // tells me that result is normal if matrix is an orthonormal projection.
+    constexpr Normal3 dot(const Normal3 &vec, const std::array<std::array<double, 3>, 3> &matrix) {
+        return Normal3(dot(vec.get_value(), matrix));
+    }
+
+    constexpr std::array<std::array<double, 3>, 3> normal_to_orthonormal_matrix(
+        const Normal3 &first_normal,
+        const Normal3 &second_normal) {
+        auto third_normal = Normal3(cross(first_normal, second_normal));
+        return std::array{
+            first_normal.get_value(),
+            cross(third_normal, first_normal).get_value(),
+            third_normal.get_value()
+        };
+    }
+
+    /*
+    * Type for a color.
+    */
+    class Color {
+    private:
+        std::array<double, 3> m_value;
+        constexpr Color(const std::array<double, 3> &rgb) :
+            m_value(rgb) {}
+    public:
+        constexpr Color(): m_value() {}
+        std::array<double, 3> to_rgb() { return m_value; }
+
+        static constexpr Color from_rgb(const std::array<double, 3> &rgb) {
+            return Color(rgb);
+        }
+
+        static constexpr Color black() { return Color(std::array{0.0, 0.0, 0.0}); }
+        static constexpr Color white() { return Color(std::array{1.0, 1.0, 1.0}); }
+
+        static Color blend(
+            const std::vector<Color> &colors
+        );
+        static constexpr Color weighted_blend(
+            const Color &first_color, const Color &second_color,
+            const double first_weight, const double second_weight
+        );
+        static constexpr Color substractive_mix(
+            const Color &first_color, const Color &second_color
+        );
+    };
+
+    constexpr Color Color::weighted_blend(
+        const Color &first_color, const Color &second_color,
+        const double first_weight, const double second_weight
+    ) {
+        return from_rgb((
+            first_color.m_value * first_weight +
+            second_color.m_value * second_weight
+        ) / (first_weight + second_weight));
+    }
+
+    constexpr Color Color::substractive_mix(
+        const Color &first_color, const Color &second_color
+    ) {
+        return from_rgb(
+            first_color.m_value * second_color.m_value
+        );
     }
 }

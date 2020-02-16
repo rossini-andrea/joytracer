@@ -52,17 +52,17 @@ namespace joytracer {
                 auto center = node.second.get("center", std::array{0.0, 0.0, 0.0}, Vec3Translator());
                 auto color = node.second.get("color", std::array{0.0, 0.0, 0.0}, Vec3Translator());
                 surfaces.push_back(std::make_unique<Sphere>(
-                    radius, center, color
+                    radius, center, Color::from_rgb(color)
                 ));
             }},
             {"sky-color", [&sky_color](const pt::ptree::value_type &node){
                 sky_color = node.second.get_value(std::array{0.0, 0.0, 0.0}, Vec3Translator());
             }},
             {"sunlight-normal", [&sunlight_normal](const pt::ptree::value_type &node){
-                sunlight_normal = normalize(node.second.get_value(std::array{0.0, 0.0, 0.0}, Vec3Translator()));
+                sunlight_normal = node.second.get_value(std::array{0.0, 0.0, 0.0}, Vec3Translator());
             }},
             {"triangle", [&surfaces](const pt::ptree::value_type &node){
-                std::array<std::array<double, 3>, 3> vertices;
+                std::array<Vec3, 3> vertices;
                 std::array<double, 3> color;
                 auto vert_iterator = vertices.begin();
 
@@ -80,7 +80,7 @@ namespace joytracer {
                     if (handler != node_handlers.end()) handler->second(node);
                 }
 
-                surfaces.push_back(std::make_unique<Triangle>(vertices, color));
+                surfaces.push_back(std::make_unique<Triangle>(vertices, Color::from_rgb(color)));
             }},
         };
 
@@ -89,6 +89,6 @@ namespace joytracer {
             if (handler != node_handlers.end()) handler->second(node);
         }
 
-        return Scene(std::move(surfaces), sky_color, sunlight_normal);
+        return Scene(std::move(surfaces), Color::from_rgb(sky_color), Normal3(sunlight_normal));
     }
 } // namespace joytracer
