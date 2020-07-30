@@ -23,7 +23,11 @@ add_executable(joytracer
     "src/sdl_main.cpp"
     "src/sdl_wrapper.cpp"
     "src/serialization.cpp")
-target_link_libraries(joytracer SDL2)
+if(WIN32)
+    target_link_libraries(joytracer mingw32 SDL2main SDL2)
+else()
+    target_link_libraries(joytracer SDL2main SDL2)
+endif()
 
 if(CLANG_TIDY_EXE)
     set_target_properties(joytracer
