@@ -157,6 +157,12 @@ namespace joytracer {
     */
     class Normal3: public Vec3 {
     public:
+        constexpr explicit Normal3(const Normal3 &vector):
+            Vec3(vector.get_value())
+        {
+
+        }
+
         constexpr explicit Normal3(const Vec3 &vector):
             Vec3(normalize(vector.get_value()))
         {

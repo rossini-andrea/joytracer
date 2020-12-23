@@ -208,7 +208,8 @@ namespace joytracer {
         );
         // WTF?
         std::rotate(orthonormal_matrix.begin(), orthonormal_matrix.begin() + 1, orthonormal_matrix.end());
-        std::vector<Color> diffuse_light_rays(hemisphere_points.size());std::transform(
+        std::vector<Color> diffuse_light_rays(hemisphere_points.size());
+        std::transform(
             hemisphere_points.begin(),
             hemisphere_points.end(),
             diffuse_light_rays.begin(),
