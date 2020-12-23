@@ -1,3 +1,5 @@
+#include <map>
+
 #include <boost/property_tree/xml_parser.hpp>
 
 #include "serialization.h"

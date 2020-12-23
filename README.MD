@@ -15,7 +15,7 @@ This is what I am using:
 
 ## Building
 
-To build and run the project, type the commands:
+To build the project, type the commands:
 
 ```sh
 export CC=/usr/bin/clang
@@ -24,6 +24,24 @@ mkdir build
 cd build
 cmake ..
 make
+```
+
+On MSYS, run the build like this:
+
+```sh
+export CC=/mingw64/bin/clang
+export CXX=/mingw64/bin/clang++
+mkdir build
+cd build
+cmake -G"MSYS Makefiles" ..
+mingw32-make
+```
+
+## Running the app
+
+I provided a test scene xml file, run the program with the command:
+
+```sh
 ./joytracer ../scenes/test_scene.xml
 ```
 

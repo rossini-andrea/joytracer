@@ -2,6 +2,7 @@
 #include <cmath>
 #include <cstdint>
 #include <memory>
+#include <array>
 
 /*
 * Thanks to http://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html
