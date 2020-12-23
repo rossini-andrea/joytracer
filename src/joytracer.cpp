@@ -119,7 +119,7 @@ namespace joytracer {
     }
 
     std::optional<HitResult> Scene::trace_single_ray(const Ray &ray) const {
-        std::vector<std::optional<HitResult>> hits;
+        std::vector<std::optional<HitResult>> hits(m_surfaces.size());
         std::transform(m_surfaces.begin(), m_surfaces.end(),
             std::back_inserter(hits),
             [&] (auto &s) -> auto {
