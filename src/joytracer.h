@@ -3,6 +3,7 @@
 #include <vector>
 #include <optional>
 #include <memory>
+#include <variant>
 
 #include "joymath.h"
 
@@ -89,18 +90,9 @@ namespace joytracer {
     };
 
     /*
-    * Base class for all surfaces.
-    */
-    class Surface {
-    public:
-        virtual ~Surface() = default;
-        virtual std::optional<HitResult> hit_test(const Ray &ray) const = 0;
-    };
-
-    /*
     * A triangle in 3D space.
     */
-    class Triangle : public Surface {
+    class Triangle {
     private:
         std::array<Vec3, 3> m_vertices;
         Color m_color;
@@ -110,23 +102,23 @@ namespace joytracer {
             const std::array<Vec3, 3> &vertices,
             const Color &color
         );
-        std::optional<HitResult> hit_test(const Ray &ray) const override;
+        std::optional<HitResult> hit_test(const Ray &ray) const;
     };
 
     /*
     * An infinite surface facing upward with fixed origin at `0,0,0`.
     */
-    class Floor : public Surface {
+    class Floor {
     public:
         Floor() {}
         ~Floor() {}
-        std::optional<HitResult> hit_test(const Ray &ray) const override;
+        std::optional<HitResult> hit_test(const Ray &ray) const;
     };
 
     /*
     * The sphere shape.
     */
-    class Sphere : public Surface {
+    class Sphere {
     private:
         double m_radius;
         Vec3 m_center;
@@ -138,7 +130,27 @@ namespace joytracer {
             m_color(color)
         {}
         ~Sphere() {}
-        std::optional<HitResult> hit_test(const Ray &ray) const override;
+        std::optional<HitResult> hit_test(const Ray &ray) const;
+    };
+
+    /*
+    * Any kind of surface.
+    */
+    using Surface = std::variant<Triangle, Floor, Sphere>;
+
+    /*
+    * A visitor to call the hit_test function of a Surface.
+    */
+    class HitTestVisitor {
+    public:
+        template<typename TSurface>
+        std::optional<HitResult> operator()(const TSurface &surface) {
+            return surface.hit_test(m_ray);
+        }
+
+        HitTestVisitor(const Ray& ray) : m_ray(ray) {}
+    private:
+        const Ray& m_ray;
     };
 
     /*
@@ -146,7 +158,7 @@ namespace joytracer {
     */
     class Scene {
     private:
-        std::vector<std::unique_ptr<Surface>> m_surfaces;
+        std::vector<Surface> m_surfaces;
         Color m_sky_color;
         Normal3 m_sunlight_normal;
 
@@ -154,7 +166,7 @@ namespace joytracer {
         Color trace_and_bounce_ray(const Ray &ray, int reflect) const;
     public:
         Scene(
-            std::vector<std::unique_ptr<Surface>> surfaces,
+            std::vector<Surface> surfaces,
             const Color &sky_color,
             const Normal3 &sunlight_normal
         ) : m_surfaces(std::move(surfaces)),

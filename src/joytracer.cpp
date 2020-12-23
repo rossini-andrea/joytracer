@@ -122,7 +122,9 @@ namespace joytracer {
         std::vector<std::optional<HitResult>> hits;
         std::transform(m_surfaces.begin(), m_surfaces.end(),
             std::back_inserter(hits),
-            [=] (auto &s) -> auto { return s->hit_test(ray); });
+            [&] (auto &s) -> auto {
+                return std::visit(HitTestVisitor(ray), s);
+            });
         auto hits_end = std::remove_if(hits.begin(), hits.end(), [](auto &h) -> bool { return !h.has_value(); } );
         auto nearest_hit = std::min_element(hits.begin(), hits_end,
             [] (auto &a, auto &b) -> bool {
