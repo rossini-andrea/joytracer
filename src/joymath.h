@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <functional>
 #include <numeric>
+#include <array>
 
 namespace joytracer {
     const double epsilon = 0.000000001;
