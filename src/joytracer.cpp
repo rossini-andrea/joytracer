@@ -119,19 +119,29 @@ namespace joytracer {
     }
 
     std::optional<HitResult> Scene::trace_single_ray(const Ray &ray) const {
-        std::vector<std::optional<HitResult>> hits(m_surfaces.size());
-        std::transform(m_surfaces.begin(), m_surfaces.end(),
+        std::vector<std::optional<HitResult>> hits;
+        hits.reserve(m_surfaces.size());
+        /*std::transform(m_surfaces.begin(), m_surfaces.end(),
             std::back_inserter(hits),
             [&] (auto &s) -> auto {
                 return std::visit(HitTestVisitor(ray), s);
             });
-        auto hits_end = std::remove_if(hits.begin(), hits.end(), [](auto &h) -> bool { return !h.has_value(); } );
-        auto nearest_hit = std::min_element(hits.begin(), hits_end,
+        auto hits_end = std::remove_if(hits.begin(), hits.end(), [](auto &h) -> bool { return !h.has_value(); } );*/
+
+        for (const auto &s: m_surfaces) {
+            auto h = std::visit(HitTestVisitor(ray), s);
+
+            if (h.has_value()) {
+                hits.push_back(h);
+            }
+        }
+
+        auto nearest_hit = std::min_element(hits.begin(), hits.end(),
             [] (auto &a, auto &b) -> bool {
                 return (a->distance() < b->distance());
             });
 
-        if (nearest_hit == hits_end) {
+        if (nearest_hit == hits.end()) {
             return std::nullopt;
         }
 
