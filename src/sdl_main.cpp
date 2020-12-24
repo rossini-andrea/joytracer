@@ -29,7 +29,10 @@ int main(int argc, char** argv) {
     fixed_camera.set_plane_size(1.0, static_cast<double>(screen_height) / static_cast<double>(screen_width));
     fixed_camera.set_position(joytracer::Vec3({0.0, 0.0, 1.77}));
     fixed_camera.set_orientation({0.0, std::acos(-1) * 0.50, 0.0});
+    auto ticks = SDL_GetTicks();
     auto fixed_frame = fixed_camera.render_scene(test_scene, screen_width, screen_height);
+    ticks = SDL_GetTicks() - ticks;
+    std::cout << "Initial render took " << ticks << " ticks.\n";
 
     // Scoped lock on the SDL surface.
     {

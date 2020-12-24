@@ -39,7 +39,7 @@ namespace joytracer {
 
     Scene load_scene(const std::string &filename) {
         pt::ptree pt;
-        std::vector<std::unique_ptr<Surface>> surfaces;
+        std::vector<Surface> surfaces;
         std::array<double, 3> sky_color;
         std::array<double, 3> sunlight_normal;
 
@@ -47,13 +47,13 @@ namespace joytracer {
 
         std::map<std::string, const std::function<void(const pt::ptree::value_type &)>> node_handlers {
             {"floor", [&surfaces](const pt::ptree::value_type &node){
-                surfaces.push_back(std::make_unique<Floor>());
+                surfaces.push_back(Floor());
             }},
             {"sphere", [&surfaces](const pt::ptree::value_type &node){
                 double radius = node.second.get("radius", 0.0);
                 auto center = node.second.get("center", std::array{0.0, 0.0, 0.0}, Vec3Translator());
                 auto color = node.second.get("color", std::array{0.0, 0.0, 0.0}, Vec3Translator());
-                surfaces.push_back(std::make_unique<Sphere>(
+                surfaces.push_back(Sphere(
                     radius, center, Color::from_rgb(color)
                 ));
             }},
@@ -82,7 +82,7 @@ namespace joytracer {
                     if (handler != node_handlers.end()) handler->second(node);
                 }
 
-                surfaces.push_back(std::make_unique<Triangle>(vertices, Color::from_rgb(color)));
+                surfaces.push_back(Triangle(vertices, Color::from_rgb(color)));
             }},
         };
 
