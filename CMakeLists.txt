@@ -3,7 +3,7 @@ set(CMAKE_CXX_STANDARD 17)
 project(joytracer)
 
 IF(MSVC)
-    SET(CMAKE_CXX_FLAGS "/EHsc")
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /fp:fast /EHsc")
 ENDIF(MSVC)
 
 find_program(
