@@ -148,31 +148,8 @@ namespace joytracer {
         return *nearest_hit;
     }
 
-    Color Scene::trace_and_bounce_ray(const Ray &ray, int reflect) const {
-        if (reflect == 0) {
-            return Color::black();
-        }
-
-        auto nearest_hit = trace_single_ray(ray);
-
-        if (!nearest_hit) {
-            auto sun_exposure = (1.0 - dot(ray.get_normal(), m_sunlight_normal)) / 2.0;
-            sun_exposure = sun_exposure >= 0.999 ? 1.0 : sun_exposure / 2.0;
-            return Color::weighted_blend(m_sky_color, Color::white(), 1.0 - sun_exposure, sun_exposure);
-        }
-
-        // Oh my God, someone fix this unnecessary mutual recursion!
-        // Also here applyes reflection by substractive color mixing,
-        // while on the other function it uses additive.
-        return Color::substractive_mix(nearest_hit->color(), trace_ray(Ray(
-            nearest_hit->point(),
-            Normal3(ray.get_normal() + nearest_hit->normal() *
-                (std::fabs(dot(ray.get_normal(), nearest_hit->normal())) * 2))
-        ), reflect - 1));
-    }
-
     std::vector<Vec3> hemisphere_points = ([]() -> auto {
-        const uint32_t point_count = 100;
+        const uint32_t point_count = 10;
         std::vector<uint32_t> range(point_count);
         std::vector<Vec3> points(point_count);
         std:iota(range.begin(), range.end(), 0);
@@ -197,7 +174,7 @@ namespace joytracer {
         }
 
         auto base_color = nearest_hit->color();
-        auto reflection_color = trace_and_bounce_ray(Ray(
+        auto reflection_color = trace_ray(Ray(
             nearest_hit->point(),
             Normal3(ray.get_normal() + nearest_hit->normal() * (std::fabs(dot(ray.get_normal(), nearest_hit->normal())) * 2))
         ), reflect - 1);
@@ -208,9 +185,10 @@ namespace joytracer {
         ));
 
         if (direct_light) {
-            // TODO: Note for future me: base_color is paint, while reflection is light,
-            // this should be implemented by substractive color mixing.
-            return Color::weighted_blend(base_color, reflection_color, 2.0, 1.0);
+            return Color::substractive_mix(
+                base_color,
+                Color::weighted_blend(Color::white(), reflection_color, 1, 1)
+            );
         }
 
         auto orthonormal_matrix = normal_to_orthonormal_matrix(
@@ -224,16 +202,17 @@ namespace joytracer {
             hemisphere_points.end(),
             diffuse_light_rays.begin(),
             [&](const auto &hemisphere_point) -> auto {
-                return trace_and_bounce_ray(Ray(
+                return trace_ray(Ray(
                     nearest_hit->point(),
                     Normal3(dot(hemisphere_point, orthonormal_matrix))
-                ), 1);
+                ), reflect - 1);
         });
         auto diffuse_light = Color::blend(diffuse_light_rays);
-        // TODO: Note for future me: base_color is paint, while diffuse_light
-        // **and** reflection are light, lights should be added, and then applied
-        // to the object by substractive color mixing.
-        return Color::weighted_blend(Color::substractive_mix(base_color, diffuse_light), reflection_color, 2.0, 1.0);
+
+        return Color::substractive_mix(
+            base_color,
+            Color::weighted_blend(diffuse_light, reflection_color, 1, 1)
+        );
     }
 
     void Camera::set_orientation(const std::array<double, 3> &orientation) {
@@ -265,7 +244,7 @@ namespace joytracer {
                 frame[y * width + x] = scene.trace_ray(Ray(
                     m_position,
                     dot(Normal3(std::array{m_focal_distance, -surface_x, surface_y}), m_view_transform)
-                ), 10);
+                ), 4);
             }
         }
 
@@ -278,6 +257,6 @@ namespace joytracer {
         return scene.trace_ray(Ray(
             m_position,
             dot(Normal3(std::array{m_focal_distance, -surface_x, surface_y}), m_view_transform)
-        ), 10);
+        ), 4);
     }
 } // namespace joytracer

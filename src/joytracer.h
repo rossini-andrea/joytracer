@@ -163,7 +163,6 @@ namespace joytracer {
         Normal3 m_sunlight_normal;
 
         std::optional<HitResult> trace_single_ray(const Ray &ray) const;
-        Color trace_and_bounce_ray(const Ray &ray, int reflect) const;
     public:
         Scene(
             std::vector<Surface> surfaces,
