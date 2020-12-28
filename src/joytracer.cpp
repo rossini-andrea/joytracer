@@ -244,7 +244,7 @@ namespace joytracer {
                 frame[y * width + x] = scene.trace_ray(Ray(
                     m_position,
                     dot(Normal3(std::array{m_focal_distance, -surface_x, surface_y}), m_view_transform)
-                ), 10);
+                ), 4);
             }
         }
 
@@ -257,6 +257,6 @@ namespace joytracer {
         return scene.trace_ray(Ray(
             m_position,
             dot(Normal3(std::array{m_focal_distance, -surface_x, surface_y}), m_view_transform)
-        ), 10);
+        ), 4);
     }
 } // namespace joytracer
