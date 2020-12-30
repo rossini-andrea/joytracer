@@ -92,18 +92,19 @@ namespace joytracer {
     template<class T>
     constexpr std::array<T, 3> dot(const std::array<T, 3> &vec,
         const std::array<std::array<T, 3>, 3> &matrix) {
-
-        std::array<uint32_t, 3> i;
-        std::array<T, 3> result;
-        std::iota(i.begin(), i.end(), 0);
-        std::transform(i.begin(), i.end(), result.begin(), [&](uint32_t column){
-            return std::inner_product(vec.begin(), vec.end(), matrix.begin(), T(0),
-                [](const auto &a, const auto &b){ return a + b; },
-                [=](const auto &vec_element, const auto &mat_row){ return vec_element * mat_row[column]; }
-            );
-        });
-
-        return result;
+        std::array<std::array<T, 3>, 3> scaled_matrix;
+        std::transform(
+            vec.begin(), vec.end(), matrix.begin(), scaled_matrix.begin(),
+            [](const auto &a, const auto &b) {
+                return b * a;
+            }
+        );
+        return std::accumulate(scaled_matrix.begin(), scaled_matrix.end(),
+            std::array<T, 3>{0, 0, 0},
+            [](const auto &a, const auto &b) {
+                return a + b;
+            }
+        );
     }
 
     /*
@@ -201,7 +202,7 @@ namespace joytracer {
     constexpr std::array<std::array<double, 3>, 3> normal_to_orthonormal_matrix(
         const Normal3 &first_normal,
         const Normal3 &second_normal) {
-        auto third_normal = Normal3(cross(first_normal, second_normal));
+        Normal3 third_normal(cross(first_normal, second_normal));
         return std::array{
             first_normal.get_value(),
             cross(third_normal, first_normal).get_value(),
