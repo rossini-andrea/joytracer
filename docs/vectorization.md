@@ -186,7 +186,19 @@ So we have a winner, right? I am planning to keep support for Visual Studio, but
 actively use clang. And I will keep the new implementation since it is no
 different from the older, but more eye-appealing.
 
-## Intermediate results
+## Final results
 
 After making small code changes, adding vectorization options, and reverting to
 MinGW clang, the initial frame render dropped to half the time.
+
+## What's next?
+
+This branch allowed me to review some old code that may need to be simplified.
+The `Vec3` class may be declared with a simple `using` allowing to:
+
+* Replace constructors with initializers.
+* Remove operators duplication.
+* Simplify `Normal3` class.
+
+Another thing that comes to mind is to totally change architecture. Currently the
+project doesn't have a rendering pipeline, it justs runs code in "logical" order.
