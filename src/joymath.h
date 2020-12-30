@@ -110,48 +110,12 @@ namespace joytracer {
     /*
     * Non normalized vector.
     */
-    class Vec3 {
-    protected:
-        std::array<double, 3> m_value;
-    public:
-        constexpr Vec3(): m_value() {}
+    using Vec3 = std::array<double, 3>;
 
-        constexpr Vec3(const std::array<double, 3> &vector): m_value(vector) {
-
-        }
-
-        constexpr double operator[](size_t i) {
-            return m_value[i];
-        }
-
-        constexpr const std::array<double, 3>& get_value() const {
-            return m_value;
-        }
-
-        constexpr Vec3 operator+(const Vec3 &other) const {
-            return this->m_value + other.m_value;
-        }
-
-        constexpr Vec3 operator-(const Vec3 &other) const {
-            return this->m_value - other.m_value;
-        }
-
-        constexpr Vec3 operator*(double scalar) const {
-            return this->m_value * scalar;
-        }
-
-        constexpr Vec3 operator*(const Vec3 &other) const {
-            return this->m_value * other.m_value;
-        }
-
-        constexpr Vec3 operator/(double scalar) const {
-            return this->m_value / scalar;
-        }
-
-        constexpr auto vector_length() const {
-            return joytracer::vector_length(m_value);
-        }
-    };
+    /*
+    * 3x3 matrix.
+    */
+   using Mat3x3 = std::array<Vec3, 3>;
 
     /*
     * A normalized vector.
@@ -159,54 +123,40 @@ namespace joytracer {
     class Normal3: public Vec3 {
     public:
         constexpr explicit Normal3(const Normal3 &vector):
-            Vec3(vector.get_value())
+            Vec3(vector)
         {
 
         }
 
         constexpr explicit Normal3(const Vec3 &vector):
-            Vec3(normalize(vector.get_value()))
+            Vec3(normalize(vector))
         {
 
         }
 
         constexpr Normal3 to_orthogonal() const {
-            return Normal3(
-                m_value[1] - m_value[2],
-                -m_value[0] + m_value[2],
-                m_value[0] - m_value[1]
+            return Normal3 (
+                operator[](1) - operator[](2),
+                -operator[](0) + operator[](2),
+                operator[](0) - operator[](1)
             );
         }
     private:
-        constexpr Normal3(double x, double y, double z): Vec3({x,y,z}) { }
+        constexpr Normal3(double x, double y, double z): Vec3{x,y,z} { }
     };
 
-    constexpr double dot(const Vec3 &a, const Vec3 &b) {
-        return dot(a.get_value(), b.get_value());
+    constexpr Normal3 dot(const Normal3 &vec, const Mat3x3 &matrix) {
+        return Normal3(dot((Vec3)vec, matrix));
     }
 
-    constexpr Vec3 dot(const Vec3 &vec, const std::array<std::array<double, 3>, 3> &matrix) {
-        return dot(vec.get_value(), matrix);
-    }
-
-    constexpr Vec3 cross(const Vec3 &a, const Vec3 &b) {
-        return cross(a.get_value(), b.get_value());
-    }
-
-    // TODO: Fix this wrapper signature ASAP. I am no mathematician, but my OOP sense
-    // tells me that result is normal if matrix is an orthonormal projection.
-    constexpr Normal3 dot(const Normal3 &vec, const std::array<std::array<double, 3>, 3> &matrix) {
-        return Normal3(dot(vec.get_value(), matrix));
-    }
-
-    constexpr std::array<std::array<double, 3>, 3> normal_to_orthonormal_matrix(
+    constexpr Mat3x3 normal_to_orthonormal_matrix(
         const Normal3 &first_normal,
         const Normal3 &second_normal) {
         Normal3 third_normal(cross(first_normal, second_normal));
-        return std::array{
-            first_normal.get_value(),
-            cross(third_normal, first_normal).get_value(),
-            third_normal.get_value()
+        return Mat3x3 {
+            first_normal,
+            cross(third_normal, first_normal),
+            third_normal
         };
     }
 
