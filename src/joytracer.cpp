@@ -11,7 +11,7 @@ namespace joytracer {
     ) {
         return from_rgb(std::accumulate(
             colors.begin(), colors.end(),
-            std::array{0.0, 0.0, 0.0},
+            Vec3{0.0, 0.0, 0.0},
             [&](const auto &accum, const auto &c) constexpr -> auto {
                 return accum + c.m_value;
             }
@@ -72,7 +72,7 @@ namespace joytracer {
     }
 
     std::optional<HitResult> Floor::hit_test(const Ray &ray) const {
-        auto projection = project_ray_on_plane_frontface(ray, Vec3({0.0, 0.0, 0.0}), Normal3(Vec3({0.0, 0.0, 1.0})));
+        auto projection = project_ray_on_plane_frontface(ray, Vec3{0.0, 0.0, 0.0}, Normal3(Vec3{0.0, 0.0, 1.0}));
 
         if (!projection) {
             return std::nullopt;
@@ -82,7 +82,7 @@ namespace joytracer {
         long is_x_odd = static_cast<long>(floorf(hit_point[0])) & 1;
         long is_y_odd = static_cast<long>(floorf(hit_point[1])) & 1;
         return HitResult(projection->distance(), hit_point,
-            Normal3(std::array{0.0, 0.0, 1.0}),
+            Normal3(Vec3{0.0, 0.0, 1.0}),
             (is_x_odd == is_y_odd) ?
             Color::white() :
             Color::black());
@@ -90,7 +90,7 @@ namespace joytracer {
 
     std::optional<HitResult> Sphere::hit_test(const Ray &ray) const {
         auto origin_to_center = ray.get_origin() - m_center;
-        auto origin_to_center_length = origin_to_center.vector_length();
+        auto origin_to_center_length = vector_length(origin_to_center);
         auto projection = dot(ray.get_normal(), origin_to_center);
         auto square = projection * projection -
         origin_to_center_length * origin_to_center_length +
@@ -121,12 +121,6 @@ namespace joytracer {
     std::optional<HitResult> Scene::trace_single_ray(const Ray &ray) const {
         std::vector<std::optional<HitResult>> hits;
         hits.reserve(m_surfaces.size());
-        /*std::transform(m_surfaces.begin(), m_surfaces.end(),
-            std::back_inserter(hits),
-            [&] (auto &s) -> auto {
-                return std::visit(HitTestVisitor(ray), s);
-            });
-        auto hits_end = std::remove_if(hits.begin(), hits.end(), [](auto &h) -> bool { return !h.has_value(); } );*/
 
         for (const auto &s: m_surfaces) {
             auto h = std::visit(HitTestVisitor(ray), s);
@@ -219,12 +213,12 @@ namespace joytracer {
         double horizontal_length = std::cos(orientation[0]);
         double yaw_cos = std::cos(orientation[1]);
         double yaw_sin = std::sin(orientation[1]);
-        Normal3 lookat(std::array<double, 3>{
+        Normal3 lookat(Vec3{
             horizontal_length * yaw_cos,
             horizontal_length * yaw_sin,
             std::sin(orientation[0])
         });
-        Normal3 left(std::array<double, 3>{
+        Normal3 left(Vec3{
             -yaw_sin,
             yaw_cos,
             0.0
@@ -243,7 +237,7 @@ namespace joytracer {
                 double surface_x = m_plane_width * (static_cast<double>(x) / width - 0.5);
                 frame[y * width + x] = scene.trace_ray(Ray(
                     m_position,
-                    dot(Normal3(std::array{m_focal_distance, -surface_x, surface_y}), m_view_transform)
+                    dot(Normal3(Vec3{m_focal_distance, -surface_x, surface_y}), m_view_transform)
                 ), 4);
             }
         }
@@ -256,7 +250,7 @@ namespace joytracer {
         double surface_x = m_plane_width * (static_cast<double>(x) / width - 0.5);
         return scene.trace_ray(Ray(
             m_position,
-            dot(Normal3(std::array{m_focal_distance, -surface_x, surface_y}), m_view_transform)
+            dot(Normal3(Vec3{m_focal_distance, -surface_x, surface_y}), m_view_transform)
         ), 4);
     }
 } // namespace joytracer
