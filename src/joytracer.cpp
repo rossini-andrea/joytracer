@@ -219,12 +219,12 @@ namespace joytracer {
         double horizontal_length = std::cos(orientation[0]);
         double yaw_cos = std::cos(orientation[1]);
         double yaw_sin = std::sin(orientation[1]);
-        Normal3 lookat(std::array{
+        Normal3 lookat(std::array<double, 3>{
             horizontal_length * yaw_cos,
             horizontal_length * yaw_sin,
             std::sin(orientation[0])
         });
-        Normal3 left(std::array{
+        Normal3 left(std::array<double, 3>{
             -yaw_sin,
             yaw_cos,
             0.0
