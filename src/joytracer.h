@@ -14,79 +14,27 @@ namespace joytracer {
     /*
     * A ray cast out into the scene.
     */
-    class Ray {
-    private:
-        Vec3 m_origin;
-        Normal3 m_normal;
-    public:
-        Ray(const Vec3 &origin,
-        const Normal3 &normal) :
-        m_origin(origin),
-        m_normal(normal) {}
-
-        const Vec3 &get_origin() const {
-            return m_origin;
-        }
-
-        const Normal3 &get_normal() const {
-            return m_normal;
-        }
+    struct Ray {
+        Vec3 origin;
+        Normal3 normal;
     };
 
     /*
     * Geometrical information about a hit result
     */
-    class HitPoint {
-    private:
-        double m_distance;
-        Vec3 m_point;
-    public:
-        HitPoint(
-            double distance,
-            const Vec3 &point
-        ) : m_distance(distance), m_point(point) {}
-
-        double distance() const {
-            return m_distance;
-        }
-
-        const Vec3 &point() const {
-            return m_point;
-        }
+    struct HitPoint {
+        double distance;
+        Vec3 point;
     };
 
     /*
     * The result of casting a ray and successfully hitting a surface.
     */
-    class HitResult {
-    private:
-        double m_distance;
-        Vec3 m_point;
-        Normal3 m_normal;
-        Color m_color;
-    public:
-        HitResult(
-            double distance,
-            const Vec3 &point,
-            const Normal3 &normal,
-            const Color &color
-        ) : m_distance(distance), m_point(point), m_normal(normal), m_color(color) {}
-
-        double distance() const {
-            return m_distance;
-        }
-
-        const Vec3 &point() const {
-            return m_point;
-        }
-
-        const Normal3 &normal() const {
-            return m_normal;
-        }
-
-        const Color &color() const {
-            return m_color;
-        }
+    struct HitResult {
+        double  distance;
+        Vec3    point;
+        Normal3 normal;
+        Color   color;
     };
 
     /*

@@ -23,14 +23,14 @@ namespace joytracer {
         const Vec3 &plane_origin,
         const Normal3 &plane_normal) {
         // Calculate if it may hit
-        auto denom = dot(ray.get_normal(), plane_normal);
+        auto denom = dot(ray.normal, plane_normal);
 
         if (denom > -epsilon) {
             return std::nullopt;
         }
 
         auto distance = dot(
-            (plane_origin - ray.get_origin()),
+            plane_origin - ray.origin,
             plane_normal) / denom;
 
         // Ignore if behind
@@ -38,7 +38,7 @@ namespace joytracer {
             return std::nullopt;
         }
 
-        return HitPoint(distance, ray.get_normal() * distance + ray.get_origin());
+        return HitPoint{distance, ray.normal * distance + ray.origin};
     }
 
     Triangle::Triangle(
@@ -58,14 +58,14 @@ namespace joytracer {
             return std::nullopt;
         }
 
-        auto hit_point = projection->point();
+        auto hit_point = projection->point;
 
         // Check if the point is "behind" all three edges at once. If so
         // it is between the edges.
         if (dot(m_normal, cross(m_vertices[1] - m_vertices[0], hit_point - m_vertices[1])) > 0 &&
             dot(m_normal, cross(m_vertices[2] - m_vertices[1], hit_point - m_vertices[2])) > 0 &&
             dot(m_normal, cross(m_vertices[0] - m_vertices[2], hit_point - m_vertices[0])) > 0) {
-            return HitResult(projection->distance(), hit_point, m_normal, m_color);
+            return HitResult { projection->distance, hit_point, m_normal, m_color };
         }
 
         return std::nullopt;
@@ -78,20 +78,22 @@ namespace joytracer {
             return std::nullopt;
         }
 
-        auto hit_point = projection->point();
+        auto hit_point = projection->point;
         long is_x_odd = static_cast<long>(floorf(hit_point[0])) & 1;
         long is_y_odd = static_cast<long>(floorf(hit_point[1])) & 1;
-        return HitResult(projection->distance(), hit_point,
+        return HitResult {
+            projection->distance, hit_point,
             Normal3(Vec3{0.0, 0.0, 1.0}),
             (is_x_odd == is_y_odd) ?
             Color::white() :
-            Color::black());
+            Color::black()
+        };
     }
 
     std::optional<HitResult> Sphere::hit_test(const Ray &ray) const {
-        auto origin_to_center = ray.get_origin() - m_center;
+        auto origin_to_center = ray.origin - m_center;
         auto origin_to_center_length = vector_length(origin_to_center);
-        auto projection = dot(ray.get_normal(), origin_to_center);
+        auto projection = dot(ray.normal, origin_to_center);
         auto square = projection * projection -
         origin_to_center_length * origin_to_center_length +
         m_radius * m_radius;
@@ -109,13 +111,14 @@ namespace joytracer {
             return std::nullopt;
         }
 
-        auto hit_point = ray.get_origin() + ray.get_normal() * distance;
+        auto hit_point = ray.origin + ray.normal * distance;
 
-        return HitResult(
+        return HitResult {
             distance,
             hit_point,
             Normal3(hit_point - m_center),
-            m_color);
+            m_color
+        };
     }
 
     std::optional<HitResult> Scene::trace_single_ray(const Ray &ray) const {
@@ -132,7 +135,7 @@ namespace joytracer {
 
         auto nearest_hit = std::min_element(hits.begin(), hits.end(),
             [] (auto &a, auto &b) -> bool {
-                return (a->distance() < b->distance());
+                return (a->distance < b->distance);
             });
 
         if (nearest_hit == hits.end()) {
@@ -162,21 +165,21 @@ namespace joytracer {
         auto nearest_hit = trace_single_ray(ray);
 
         if (!nearest_hit) {
-            auto sun_exposure = (1.0 - dot(ray.get_normal(), m_sunlight_normal)) / 2.0;
+            auto sun_exposure = (1.0 - dot(ray.normal, m_sunlight_normal)) / 2.0;
             sun_exposure = sun_exposure >= 0.999 ? 1.0 : sun_exposure / 2.0;
             return Color::weighted_blend(m_sky_color, Color::white(), 1.0 - sun_exposure, sun_exposure);
         }
 
-        auto base_color = nearest_hit->color();
-        auto reflection_color = trace_ray(Ray(
-            nearest_hit->point(),
-            Normal3(ray.get_normal() + nearest_hit->normal() * (std::fabs(dot(ray.get_normal(), nearest_hit->normal())) * 2))
-        ), reflect - 1);
+        auto base_color = nearest_hit->color;
+        auto reflection_color = trace_ray(Ray{
+            nearest_hit->point,
+            Normal3(ray.normal + nearest_hit->normal * (std::fabs(dot(ray.normal, nearest_hit->normal) * 2)))
+        }, reflect - 1);
 
-        bool direct_light = !trace_single_ray(Ray(
-            nearest_hit->point(),
+        bool direct_light = !trace_single_ray(Ray{
+            nearest_hit->point,
             Normal3(m_sunlight_normal * -1.0)
-        ));
+        });
 
         if (direct_light) {
             return Color::substractive_mix(
@@ -186,7 +189,7 @@ namespace joytracer {
         }
 
         auto orthonormal_matrix = normal_to_orthonormal_matrix(
-            nearest_hit->normal(), nearest_hit->normal().to_orthogonal()
+            nearest_hit->normal, nearest_hit->normal.to_orthogonal()
         );
         // WTF?
         std::rotate(orthonormal_matrix.begin(), orthonormal_matrix.begin() + 1, orthonormal_matrix.end());
@@ -196,10 +199,10 @@ namespace joytracer {
             hemisphere_points.end(),
             diffuse_light_rays.begin(),
             [&](const auto &hemisphere_point) -> auto {
-                return trace_ray(Ray(
-                    nearest_hit->point(),
+                return trace_ray(Ray{
+                    nearest_hit->point,
                     Normal3(dot(hemisphere_point, orthonormal_matrix))
-                ), reflect - 1);
+                }, reflect - 1);
         });
         auto diffuse_light = Color::blend(diffuse_light_rays);
 
@@ -235,10 +238,10 @@ namespace joytracer {
 
             for (int x = 0; x < width; ++x) {
                 double surface_x = m_plane_width * (static_cast<double>(x) / width - 0.5);
-                frame[y * width + x] = scene.trace_ray(Ray(
+                frame[y * width + x] = scene.trace_ray(Ray{
                     m_position,
                     dot(Normal3(Vec3{m_focal_distance, -surface_x, surface_y}), m_view_transform)
-                ), 4);
+                }, 4);
             }
         }
 
@@ -248,9 +251,9 @@ namespace joytracer {
     Color Camera::test_point(const Scene &scene, int width, int height, int x, int y) {
         double surface_y = m_plane_height * (0.5 - static_cast<double>(y) / height);
         double surface_x = m_plane_width * (static_cast<double>(x) / width - 0.5);
-        return scene.trace_ray(Ray(
+        return scene.trace_ray(Ray{
             m_position,
             dot(Normal3(Vec3{m_focal_distance, -surface_x, surface_y}), m_view_transform)
-        ), 4);
+        }, 4);
     }
 } // namespace joytracer
